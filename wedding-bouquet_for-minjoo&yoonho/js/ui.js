@@ -1,4 +1,5 @@
 import { placeholderCanvas } from './wall.js';
+import { letters, writeLetter, refreshLetters, onLettersChange } from './letters.js';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -6,7 +7,7 @@ const store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 사생활 보호 모드 등 */ } },
 };
 
-export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
+export function createUI({ site, photos, music, hooks }) {
   /* ───── 문구 ───── */
   $('site-title').textContent = site.title;
   document.title = site.title;
@@ -93,25 +94,104 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   let cur = -1;
   const sheet = $('letter');
   const paper = $('paper');
+  const view = $('letter-view');
+  const form = $('letter-form');
+  const fFrom = $('f-from'), fText = $('f-text'), fPin = $('f-pin'), fErr = $('f-err'), fSave = $('f-save');
+  let editing = false;
+
   function renderLetter(i, animate) {
     const l = letters[i];
     const hand = letterHand[i];
     paper.style.setProperty('--letter-font', `"${hand.family}", var(--hand)`);
     paper.style.setProperty('--letter-size', hand.size);
     const chip = $('letter-chip');
-    chip.textContent = 'From.';
-    const name = document.createElement('b');
-    name.textContent = l.from;
-    chip.appendChild(name);
-    $('letter-body').textContent = l.text;
+    const body = $('letter-body');
+    if (l.empty) {
+      chip.textContent = '💌 빈 편지';
+      body.textContent = '아직 비어 있는 편지예요.\n이 꽃에 민주에게 전할 마음을 남겨주세요.';
+      body.classList.add('placeholder');
+    } else {
+      chip.textContent = 'From.';
+      const name = document.createElement('b');
+      name.textContent = l.from;
+      chip.appendChild(name);
+      body.textContent = l.text;
+      body.classList.remove('placeholder');
+    }
+    view.classList.toggle('can-write', l.empty);
+    view.classList.toggle('can-edit', !l.empty && !l.locked);
     $('letter-count').textContent = `${i + 1} / ${letters.length}`;
     paper.scrollTop = 0;
     if (animate) { paper.classList.remove('swap'); void paper.offsetWidth; paper.classList.add('swap'); }
   }
+
+  /* 편지 쓰기 / 수정 */
+  const pinKey = (i) => `bouquet.pin.${i}`;
+  function openEditor() {
+    if (cur < 0) return;
+    const l = letters[cur];
+    const isNew = l.empty;
+    editing = true;
+    paper.classList.add('editing');
+    view.hidden = true; form.hidden = false;
+    fFrom.value = isNew ? '' : l.from;
+    fText.value = isNew ? '' : l.text;
+    fPin.value = store.get(pinKey(cur), '') || '';
+    $('f-len').textContent = fText.value.length;
+    $('f-note').textContent = isNew
+      ? '비밀번호 4자리를 정해두면, 나중에 같은 비밀번호로 이 편지를 고칠 수 있어요.'
+      : '편지를 처음 쓸 때 정한 비밀번호 4자리를 입력해 주세요.';
+    fErr.textContent = '';
+    fSave.disabled = false;
+    fSave.textContent = isNew ? '편지 남기기' : '수정 저장';
+    paper.scrollTop = 0;
+    setTimeout(() => (isNew ? fFrom : fText).focus({ preventScroll: true }), 350);
+  }
+  function closeEditor() {
+    if (!editing) return;
+    editing = false;
+    paper.classList.remove('editing');
+    form.hidden = true; view.hidden = false;
+    document.activeElement?.blur?.();
+  }
+  $('letter-write').onclick = openEditor;
+  $('letter-edit').onclick = openEditor;
+  $('f-cancel').onclick = () => { closeEditor(); renderLetter(cur, false); };
+  fText.addEventListener('input', () => { $('f-len').textContent = fText.value.length; });
+  fPin.addEventListener('input', () => { fPin.value = fPin.value.replace(/\D/g, '').slice(0, 4); });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const slot = cur;
+    const from = fFrom.value.trim(), text = fText.value.trim(), pin = fPin.value.trim();
+    if (!from) { fErr.textContent = '이름을 적어주세요.'; fFrom.focus(); return; }
+    if (!text) { fErr.textContent = '편지 내용을 적어주세요.'; fText.focus(); return; }
+    if (!/^\d{4}$/.test(pin)) { fErr.textContent = '비밀번호는 숫자 4자리예요.'; fPin.focus(); return; }
+    fErr.textContent = '';
+    fSave.disabled = true; fSave.textContent = '저장 중…';
+    try {
+      const result = await writeLetter(slot, from, text, pin);
+      store.set(pinKey(slot), pin);
+      if (cur !== slot) return;
+      closeEditor();
+      renderLetter(slot, true);
+      toast(result === 'created' ? '편지가 꽃에 담겼어요 💌' : '편지를 고쳤어요 ✏️');
+      const r = paper.getBoundingClientRect();
+      confetti(r.left + r.width / 2, r.top + 10, { count: 70 });
+      hooks.onWritten?.(slot);
+    } catch (err) {
+      fErr.textContent = err.message;
+      fSave.disabled = false; fSave.textContent = letters[slot].empty ? '편지 남기기' : '수정 저장';
+    }
+  });
+  // 서버에서 새 편지가 들어오면 지금 보고 있는 편지를 다시 그림
+  onLettersChange(() => { if (cur >= 0 && !editing) renderLetter(cur, false); });
+
   function openLetter(i) {
     const wasOpen = cur >= 0;
+    closeEditor();
     cur = (i + letters.length) % letters.length;
     renderLetter(cur, wasOpen);
+    refreshLetters();
     sheet.classList.add('open'); sheet.setAttribute('aria-hidden', 'false');
     document.body.classList.add('reading');
     if (!readSet.has(cur)) { readSet.add(cur); store.set('bouquet.read.v1', [...readSet]); updateProgress(); hooks.onRead?.(cur); }
@@ -119,6 +199,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   }
   function closeLetter() {
     if (cur < 0) return;
+    closeEditor();
     cur = -1;
     sheet.classList.remove('open'); sheet.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('reading');
@@ -129,7 +210,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   {
     let x0 = null, y0 = 0, dx = 0, dy = 0, axis = null;
     paper.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('button')) return;
+      if (editing || e.target.closest('button, input, textarea, label')) return;
       x0 = e.clientX; y0 = e.clientY; dx = dy = 0; axis = null;
     });
     paper.addEventListener('pointermove', (e) => {
@@ -157,7 +238,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
     // 트랙패드/마우스 가로 스크롤
     let wheelLock = 0;
     paper.addEventListener('wheel', (e) => {
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 25) return;
+      if (editing || Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 25) return;
       e.preventDefault();
       const now = performance.now();
       if (now < wheelLock) return;
@@ -167,7 +248,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   }
   /** 편지를 옆으로 밀어내고 다음/이전 편지를 반대편에서 들여옴 */
   function flip(dir) {
-    if (cur < 0) return;
+    if (cur < 0 || editing) return;
     paper.style.transition = 'transform .2s ease-in, opacity .2s';
     paper.style.transform = `translateX(${-dir * 110}%) rotate(${-dir * 4}deg)`;
     paper.style.opacity = '0';
@@ -262,6 +343,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
     st.addEventListener('pointercancel', () => { x0 = null; });
   }
   window.addEventListener('keydown', (e) => {
+    if (e.target.closest?.('input, textarea')) { if (e.key === 'Escape') closeEditor(); return; }
     if (e.key === 'Escape') { closePhoto(); closeLetter(); }
     else if (pi >= 0) { if (e.key === 'ArrowRight') slide(1); if (e.key === 'ArrowLeft') slide(-1); }
     else if (cur >= 0) { if (e.key === 'ArrowRight') flip(1); if (e.key === 'ArrowLeft') flip(-1); }
@@ -311,6 +393,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
     toast, pop, confetti, rain, openLetter, closeLetter, openPhoto, closePhoto,
     isRead: (i) => readSet.has(i),
     get readCount() { return readSet.size; },
+    get editing() { return editing; },
     get letterOpen() { return cur >= 0; },
     get photoOpen() { return pi >= 0; },
     get current() { return cur; },

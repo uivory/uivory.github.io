@@ -66,8 +66,32 @@
     <div class="paper" id="paper">
       <i class="tape tape-l"></i><i class="tape tape-r"></i>
       <button class="x" id="letter-close" aria-label="닫기">×</button>
-      <div class="chip" id="letter-chip"></div>
-      <p class="body" id="letter-body"></p>
+      <div class="view" id="letter-view">
+        <div class="chip" id="letter-chip"></div>
+        <p class="body" id="letter-body"></p>
+        <div class="actions">
+          <button class="write-btn" id="letter-write">✍️ 편지 쓰기</button>
+          <button class="edit-btn" id="letter-edit">✏️ 수정하기</button>
+        </div>
+      </div>
+      <form class="compose" id="letter-form" autocomplete="off" novalidate hidden>
+        <label class="row">
+          <span>From.</span>
+          <input id="f-from" name="from" maxlength="20" placeholder="이름" required>
+        </label>
+        <textarea id="f-text" name="text" maxlength="1000" rows="6" placeholder="민주에게 마음을 남겨주세요 💌" required></textarea>
+        <div class="count"><span id="f-len">0</span> / 1000</div>
+        <label class="row pin">
+          <span>비밀번호</span>
+          <input id="f-pin" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="숫자 4자리" required>
+        </label>
+        <p class="note" id="f-note"></p>
+        <p class="err" id="f-err" role="alert"></p>
+        <div class="form-btns">
+          <button type="button" class="ghost" id="f-cancel">취소</button>
+          <button type="submit" class="save" id="f-save">저장하기</button>
+        </div>
+      </form>
       <div class="pager">
         <button id="letter-prev" aria-label="이전 편지">‹</button>
         <span id="letter-count"></span>
