@@ -53,9 +53,7 @@
     <div id="hint" class="pill">
       <span class="hint-ic">✋</span><span id="hint-text">드래그해서 돌려보고, 두 손가락으로 확대해요</span>
     </div>
-    <div id="progress" class="pill" hidden>
-      <span class="env">✉</span> 읽은 편지 <b id="read-count">0</b> / <span id="read-total">17</span>
-    </div>
+    <button id="cta" class="cta" type="button">✍️ 편지 남기기</button>
   </footer>
 
   <div id="toast" role="status"></div>
@@ -82,10 +80,17 @@
         <textarea id="f-text" name="text" maxlength="1000" rows="6" placeholder="민주에게 마음을 남겨주세요 💌" required></textarea>
         <div class="count"><span id="f-len">0</span> / 1000</div>
         <label class="row pin">
-          <span>비밀번호</span>
-          <input id="f-pin" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="숫자 4자리" required>
+          <span id="f-pin-label">비밀번호</span>
+          <input id="f-pin" name="pin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="숫자 4자리">
         </label>
-        <p class="note" id="f-note"></p>
+        <p class="hint-sm" id="f-pin-hint">초기 비밀번호는 <b>0000</b> 이에요</p>
+        <div id="f-newpin-wrap">
+          <label class="row pin">
+            <span>새 비밀번호</span>
+            <input id="f-newpin" name="newpin" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="바꿀 때만">
+          </label>
+          <p class="hint-sm">비워두면 지금 비밀번호 그대로예요</p>
+        </div>
         <p class="err" id="f-err" role="alert"></p>
         <div class="form-btns">
           <button type="button" class="ghost" id="f-cancel">취소</button>
@@ -94,9 +99,22 @@
       </form>
       <div class="pager">
         <button id="letter-prev" aria-label="이전 편지">‹</button>
-        <span id="letter-count"></span>
+        <button id="letter-count" class="ind" type="button" aria-label="편지 목록 열기"></button>
         <button id="letter-next" aria-label="다음 편지">›</button>
       </div>
+    </div>
+  </section>
+
+  <!-- 편지함 목록 -->
+  <section id="picker" aria-hidden="true">
+    <div class="pk-backdrop" id="pk-backdrop"></div>
+    <div class="pk-panel" role="dialog" aria-label="편지함">
+      <header class="pk-head">
+        <h2>💐 편지함</h2>
+        <span class="pk-count" id="pk-count"></span>
+        <button class="pk-x" id="pk-close" aria-label="닫기">×</button>
+      </header>
+      <div class="pk-grid" id="pk-grid"></div>
     </div>
   </section>
 

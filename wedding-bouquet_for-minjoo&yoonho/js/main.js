@@ -178,24 +178,17 @@ function setRay(cx, cy) {
 }
 function pick(cx, cy) {
   setRay(cx, cy);
-  const cand = [];
-  if (bq) {
-    bq.flowers.forEach((f) => { if (f.index < letters.length) cand.push(f.mesh); });
-  }
-  cand.push(...wall.hits.filter((h) => h.parent.visible), ...dogHits);
+  const cand = [...wall.hits.filter((h) => h.parent.visible), ...dogHits];
+  if (bq) cand.push(...bq.flowers.map((f) => f.mesh), ...bq.foliage.children);
   const hit = ray.intersectObjects(cand, false)[0];
   if (hit) {
     const o = hit.object;
-    if (o.userData.flowerIndex !== undefined) return { type: 'flower', index: o.userData.flowerIndex };
     if (o.userData.photoIndex !== undefined) return { type: 'photo', index: o.userData.photoIndex };
     if (o.userData.dog) return { type: 'dog', dog: o.userData.dog, point: hit.point };
+    return { type: 'bouquet' };
   }
-  // 손가락으로 누르기 쉽게: 꽃 주변 투명 구체에 가장 가까운 것
-  if (bq) {
-    const proxies = bq.flowers.filter((f) => f.index < letters.length).map((f) => f.proxy);
-    const ph = ray.intersectObjects(proxies, false)[0];
-    if (ph) return { type: 'flower', index: ph.object.userData.flowerIndex };
-  }
+  // 손가락으로 누르기 쉽게: 부케를 감싸는 투명 구체
+  if (bqHit && ray.intersectObject(bqHit, false)[0]) return { type: 'bouquet' };
   return null;
 }
 
@@ -207,7 +200,8 @@ function worldToScreen(v) {
 
 /* ───────── 동작: 꽃 / 사진 / 강아지 ───────── */
 let selected = -1;
-let hoverFlower = -1, hoverPhoto = -1;
+let hoverBouquet = false, hoverPhoto = -1;
+let bqHit = null;
 
 function flowerWorldAt(f, yaw) {
   const old = spin.rotation.y;
@@ -239,10 +233,6 @@ function focusFlower(i) {
   view.shiftT.set(wide ? 0.16 : 0, wide ? 0 : 0.2);
 }
 
-function openFlower(i) {
-  if (i >= letters.length) return;
-  ui.openLetter(i);
-}
 
 function unfocus() {
   selected = -1;
@@ -279,7 +269,7 @@ function handleTap(cx, cy, dbl) {
     else spark(cx, cy);
     return;
   }
-  if (hit.type === 'flower') openFlower(hit.index);
+  if (hit.type === 'bouquet') ui.openLetter(0); // 부케 어디를 눌러도 항상 1번 편지부터
   else if (hit.type === 'photo') {
     ui.closeLetter();
     ui.openPhoto(hit.index, photoScreenInfo(wall.items[hit.index]));
@@ -401,7 +391,7 @@ canvas.addEventListener('pointerdown', onDown);
 canvas.addEventListener('pointermove', onMove);
 canvas.addEventListener('pointerup', onUp);
 canvas.addEventListener('pointercancel', onUp);
-canvas.addEventListener('pointerleave', () => { hoverFlower = -1; hoverPhoto = -1; canvas.classList.remove('point'); });
+canvas.addEventListener('pointerleave', () => { hoverBouquet = false; hoverPhoto = -1; canvas.classList.remove('point'); });
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   view.idle = 0;
@@ -413,10 +403,52 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 function updateHover(x, y) {
   const hit = pick(x, y);
-  hoverFlower = hit?.type === 'flower' ? hit.index : -1;
+  hoverBouquet = hit?.type === 'bouquet';
   hoverPhoto = hit?.type === 'photo' ? hit.index : -1;
   canvas.classList.toggle('point', !!hit);
   canvas.classList.toggle('grab', !hit);
+}
+
+/* ───────── 편지함 목록용 꽃 썸네일 (꽃 한 송이씩 3D 렌더) ───────── */
+let thumbs = null;
+function flowerThumbs() {
+  if (thumbs || !bq) return thumbs || [];
+  const SIZE = 220;
+  const r2 = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  r2.setPixelRatio(1);
+  r2.setSize(SIZE, SIZE, false);
+  r2.outputColorSpace = THREE.SRGBColorSpace;
+  r2.toneMapping = THREE.NeutralToneMapping;
+  r2.toneMappingExposure = 1.0;
+  const sc = new THREE.Scene();
+  const pm = new THREE.PMREMGenerator(r2);
+  sc.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture;
+  sc.environmentIntensity = 0.45;
+  sc.add(new THREE.HemisphereLight('#fffaf0', '#cfc6b6', 0.9));
+  const dl = new THREE.DirectionalLight('#fff3e0', 1.7);
+  sc.add(dl);
+  const cam = new THREE.PerspectiveCamera(28, 1, 0.005, 10);
+  const half = THREE.MathUtils.degToRad(cam.fov / 2);
+  thumbs = bq.flowers.map((f) => {
+    const mat = f.mesh.material.clone();
+    mat.emissiveIntensity = 0.04;
+    const m = new THREE.Mesh(f.mesh.geometry, mat);
+    sc.add(m);
+    // 꽃이 바라보는 방향(부케 중심에서 바깥·위쪽)에서 비춰 찍기
+    const dir = f.center.clone().setY(Math.max(f.center.y, 0) + 0.12).normalize();
+    const dist = (f.radius * 1.08) / Math.sin(half);
+    cam.position.copy(dir).multiplyScalar(dist);
+    cam.up.set(0, 1, 0);
+    cam.lookAt(0, 0, 0);
+    dl.position.copy(cam.position).add(new THREE.Vector3(-0.4, 0.8, 0).multiplyScalar(dist));
+    r2.render(sc, cam);
+    const url = r2.domElement.toDataURL('image/png');
+    sc.remove(m); mat.dispose();
+    return url;
+  });
+  pm.dispose(); sc.environment.dispose();
+  r2.dispose(); r2.forceContextLoss();
+  return thumbs;
 }
 
 /* ───────── UI ───────── */
@@ -425,6 +457,8 @@ ui = createUI({
   flowerInfo: (i) => bq?.flowers[i]?.label ?? { icon: '🌸', ko: '꽃' },
   hooks: {
     onLetter: (i) => focusFlower(i),
+    thumbs: () => flowerThumbs(),
+    flowerLabel: (i) => bq?.flowers[i]?.label,
     onLetterClose: () => unfocus(),
     onRead: (i) => { if (bq) bq.flowers[i].read = true; },
     onViewing: () => {},
@@ -466,7 +500,7 @@ function frame() {
     holder.getWorldPosition(BC);
     bq.flowers.forEach((f) => {
       const on = f.index < letters.length;
-      const target = f.index === selected ? 1 : f.index === hoverFlower ? 0.7 : 0;
+      const target = f.index === selected ? 1 : hoverBouquet ? 0.35 : 0;
       f.hot = damp(f.hot, target, 12, dt);
       const unread = on && !f.read;
       const breathe = unread ? Math.sin(t * 2 + f.phase) * 0.018 : 0;
@@ -510,7 +544,6 @@ function frame() {
   try {
     bq = await loadBouquet();
     spin.add(bq.group);
-    $('read-total').textContent = letters.length;
     bq.flowers.forEach((f) => {
       if (ui.isRead(f.index)) f.read = true;
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: starTex, transparent: true, depthTest: false, depthWrite: false, opacity: 0 }));
@@ -527,6 +560,13 @@ function frame() {
     $('loader').querySelector('p').textContent = '부케를 불러오지 못했어요. 새로고침 해주세요.';
     return;
   }
+  {
+    const box = new THREE.Box3().setFromObject(bq.group);
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    bqHit = new THREE.Mesh(new THREE.SphereGeometry(sphere.radius * 0.78, 16, 12), new THREE.MeshBasicMaterial({ visible: false }));
+    bqHit.position.copy(sphere.center).add(new THREE.Vector3(0, sphere.radius * 0.15, 0));
+    spin.add(bqHit);
+  }
   refreshLetters(true);
   renderer.setAnimationLoop(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => $('loader').classList.add('done')));
@@ -534,7 +574,7 @@ function frame() {
   // 안내 문구 순서대로
   const hintText = $('hint-text');
   setTimeout(() => { if (!ui.readCount) { $('hint').classList.remove('gone'); } }, 300);
-  setTimeout(() => { hintText.textContent = '꽃과 벽의 사진을 눌러보세요 ✉'; }, 6500);
+  setTimeout(() => { hintText.textContent = '부케를 누르면 편지가 열려요 💌'; }, 6500);
   setTimeout(() => { $('hint').classList.add('gone'); }, 14000);
   if (!document.getElementById('bgm').error) {
     setTimeout(() => { if (document.getElementById('bgm').paused && !document.getElementById('btn-music').classList.contains('on')) ui.toast('화면을 한 번 터치하면 음악이 시작돼요 ♪', 3200); }, 1800);

@@ -12,7 +12,6 @@ export function createUI({ site, photos, music, hooks }) {
   $('site-title').textContent = site.title;
   document.title = site.title;
   $('site-sub').textContent = site.subtitle;
-  $('read-total').textContent = letters.length;
 
   /* ───── toast / pop ───── */
   let toastTimer;
@@ -74,8 +73,6 @@ export function createUI({ site, photos, music, hooks }) {
   /* ───── 읽은 편지 ───── */
   const readSet = new Set(store.get('bouquet.read.v1', []));
   function updateProgress() {
-    $('read-count').textContent = readSet.size;
-    $('progress').hidden = readSet.size === 0;
     if (readSet.size > 0) $('hint').classList.add('gone');
   }
   updateProgress();
@@ -96,7 +93,7 @@ export function createUI({ site, photos, music, hooks }) {
   const paper = $('paper');
   const view = $('letter-view');
   const form = $('letter-form');
-  const fFrom = $('f-from'), fText = $('f-text'), fPin = $('f-pin'), fErr = $('f-err'), fSave = $('f-save');
+  const fFrom = $('f-from'), fText = $('f-text'), fPin = $('f-pin'), fNew = $('f-newpin'), fErr = $('f-err'), fSave = $('f-save');
   let editing = false;
 
   function renderLetter(i, animate) {
@@ -120,7 +117,7 @@ export function createUI({ site, photos, music, hooks }) {
     }
     view.classList.toggle('can-write', l.empty);
     view.classList.toggle('can-edit', !l.empty && !l.locked);
-    $('letter-count').textContent = `${i + 1} / ${letters.length}`;
+    $('letter-count').textContent = `${i + 1} / ${letters.length} ▾`;
     paper.scrollTop = 0;
     if (animate) { paper.classList.remove('swap'); void paper.offsetWidth; paper.classList.add('swap'); }
   }
@@ -137,10 +134,13 @@ export function createUI({ site, photos, music, hooks }) {
     fFrom.value = isNew ? '' : l.from;
     fText.value = isNew ? '' : l.text;
     fPin.value = store.get(pinKey(cur), '') || '';
+    fNew.value = '';
     $('f-len').textContent = fText.value.length;
-    $('f-note').textContent = isNew
-      ? '비밀번호 4자리를 정해두면, 나중에 같은 비밀번호로 이 편지를 고칠 수 있어요.'
-      : '편지를 처음 쓸 때 정한 비밀번호 4자리를 입력해 주세요.';
+    fPin.placeholder = isNew ? '비워두면 0000' : '숫자 4자리';
+    $('f-pin-hint').innerHTML = isNew
+      ? '비워두면 초기 비밀번호 <b>0000</b> 으로 저장돼요. 나중에 이 비밀번호로 고칠 수 있어요.'
+      : '초기 비밀번호는 <b>0000</b> 이에요';
+    $('f-newpin-wrap').hidden = isNew;
     fErr.textContent = '';
     fSave.disabled = false;
     fSave.textContent = isNew ? '편지 남기기' : '수정 저장';
@@ -158,19 +158,21 @@ export function createUI({ site, photos, music, hooks }) {
   $('letter-edit').onclick = openEditor;
   $('f-cancel').onclick = () => { closeEditor(); renderLetter(cur, false); };
   fText.addEventListener('input', () => { $('f-len').textContent = fText.value.length; });
-  fPin.addEventListener('input', () => { fPin.value = fPin.value.replace(/\D/g, '').slice(0, 4); });
+  [fPin, fNew].forEach((el) => el.addEventListener('input', () => { el.value = el.value.replace(/\D/g, '').slice(0, 4); }));
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const slot = cur;
-    const from = fFrom.value.trim(), text = fText.value.trim(), pin = fPin.value.trim();
+    const isNew = letters[slot].empty;
+    const from = fFrom.value.trim(), text = fText.value.trim(), pin = fPin.value.trim(), newPin = fNew.value.trim();
     if (!from) { fErr.textContent = '이름을 적어주세요.'; fFrom.focus(); return; }
     if (!text) { fErr.textContent = '편지 내용을 적어주세요.'; fText.focus(); return; }
-    if (!/^\d{4}$/.test(pin)) { fErr.textContent = '비밀번호는 숫자 4자리예요.'; fPin.focus(); return; }
+    if (!(isNew && pin === '') && !/^\d{4}$/.test(pin)) { fErr.textContent = '비밀번호는 숫자 4자리예요.'; fPin.focus(); return; }
+    if (newPin && !/^\d{4}$/.test(newPin)) { fErr.textContent = '새 비밀번호는 숫자 4자리예요.'; fNew.focus(); return; }
     fErr.textContent = '';
     fSave.disabled = true; fSave.textContent = '저장 중…';
     try {
-      const result = await writeLetter(slot, from, text, pin);
-      store.set(pinKey(slot), pin);
+      const result = await writeLetter(slot, from, text, pin, newPin);
+      store.set(pinKey(slot), newPin || pin || '0000');
       if (cur !== slot) return;
       closeEditor();
       renderLetter(slot, true);
@@ -184,7 +186,73 @@ export function createUI({ site, photos, music, hooks }) {
     }
   });
   // 서버에서 새 편지가 들어오면 지금 보고 있는 편지를 다시 그림
-  onLettersChange(() => { if (cur >= 0 && !editing) renderLetter(cur, false); });
+  onLettersChange(() => { if (cur >= 0 && !editing) renderLetter(cur, false); updateCta(); if (pickerOpen) renderPicker(); });
+
+  /* ───── 하단 버튼: 편지 남기기 → (17통이 다 차면) 편지 읽기 ───── */
+  const cta = $('cta');
+  const firstEmpty = () => letters.findIndex((l) => l.empty);
+  function updateCta() {
+    const full = firstEmpty() < 0;
+    cta.textContent = full ? '📖 편지 읽기' : '✍️ 편지 남기기';
+    cta.classList.toggle('read', full);
+  }
+  cta.onclick = () => {
+    const i = firstEmpty();
+    if (i < 0) { openLetter(0); return; }
+    openLetter(i);
+    openEditor();
+  };
+  updateCta();
+
+  /* ───── 편지함 목록 (3 × 6) ───── */
+  const picker = $('picker'), grid = $('pk-grid');
+  let pickerOpen = false;
+  function renderPicker() {
+    const th = hooks.thumbs?.() || [];
+    const filled = letters.filter((l) => !l.empty).length;
+    $('pk-count').textContent = `${filled} / ${letters.length} 통`;
+    grid.innerHTML = '';
+    for (let i = 0; i < 18; i++) {
+      const cell = document.createElement('div');
+      if (i >= letters.length) { cell.className = 'pk-cell pk-blank'; grid.appendChild(cell); continue; }
+      const l = letters[i];
+      cell.className = 'pk-cell' + (l.empty ? ' empty' : '') + (i === cur ? ' current' : '');
+      const frame = document.createElement(l.empty ? 'div' : 'button');
+      frame.className = 'pk-frame';
+      if (!l.empty) { frame.type = 'button'; frame.setAttribute('aria-label', `${l.from}의 편지 열기`); frame.onclick = () => { closePicker(); openLetter(i); }; }
+      const no = document.createElement('span'); no.className = 'pk-no'; no.textContent = i + 1;
+      frame.appendChild(no);
+      if (th[i]) { const img = new Image(); img.src = th[i]; img.alt = ''; img.className = 'pk-img'; frame.appendChild(img); }
+      else { const ph = document.createElement('span'); ph.className = 'pk-ph'; ph.textContent = hooks.flowerLabel?.(i)?.icon || '🌸'; frame.appendChild(ph); }
+      if (l.empty) {
+        const plus = document.createElement('button');
+        plus.type = 'button'; plus.className = 'pk-plus'; plus.setAttribute('aria-label', `${i + 1}번 빈 편지함에 편지 쓰기`);
+        plus.innerHTML = '<span>+</span>';
+        plus.onclick = (e) => { e.stopPropagation(); closePicker(); openLetter(i); openEditor(); };
+        frame.appendChild(plus);
+      }
+      const title = document.createElement('div');
+      title.className = 'pk-title';
+      title.textContent = l.empty ? '빈 편지함' : `${l.from}의 편지`;
+      cell.append(frame, title);
+      grid.appendChild(cell);
+    }
+  }
+  function openPicker() {
+    if (editing) return;
+    pickerOpen = true;
+    renderPicker();
+    picker.classList.add('open'); picker.setAttribute('aria-hidden', 'false');
+    refreshLetters();
+  }
+  function closePicker() {
+    if (!pickerOpen) return;
+    pickerOpen = false;
+    picker.classList.remove('open'); picker.setAttribute('aria-hidden', 'true');
+  }
+  $('letter-count').onclick = openPicker;
+  $('pk-close').onclick = closePicker;
+  $('pk-backdrop').onclick = closePicker;
 
   function openLetter(i) {
     const wasOpen = cur >= 0;
@@ -344,7 +412,7 @@ export function createUI({ site, photos, music, hooks }) {
   }
   window.addEventListener('keydown', (e) => {
     if (e.target.closest?.('input, textarea')) { if (e.key === 'Escape') closeEditor(); return; }
-    if (e.key === 'Escape') { closePhoto(); closeLetter(); }
+    if (e.key === 'Escape') { if (pickerOpen) { closePicker(); return; } closePhoto(); closeLetter(); }
     else if (pi >= 0) { if (e.key === 'ArrowRight') slide(1); if (e.key === 'ArrowLeft') slide(-1); }
     else if (cur >= 0) { if (e.key === 'ArrowRight') flip(1); if (e.key === 'ArrowLeft') flip(-1); }
   });
@@ -394,6 +462,8 @@ export function createUI({ site, photos, music, hooks }) {
     isRead: (i) => readSet.has(i),
     get readCount() { return readSet.size; },
     get editing() { return editing; },
+    get pickerOpen() { return pickerOpen; },
+    openPicker, closePicker, openEditor,
     get letterOpen() { return cur >= 0; },
     get photoOpen() { return pi >= 0; },
     get current() { return cur; },

@@ -3,8 +3,8 @@ import { letters as presetLetters, letterApi, LETTER_SLOTS } from '../data/conte
 /* ────────────────────────────────────────────────────────────
    편지 저장소 (Supabase)
    - 읽기: bouquet_letters 테이블 (누구나)
-   - 쓰기/수정: write_bouquet_letter() 함수 (빈 편지는 처음 쓰는 사람이 비밀번호 4자리를 정하고,
-     수정은 그 비밀번호로만 가능. 미리 넣어둔 편지는 locked 라 수정 불가)
+   - 쓰기/수정: write_bouquet_letter() 함수
+     (초기 비밀번호 0000. 새로 쓸 때 정할 수 있고, 수정할 때 새 비밀번호로 바꿀 수 있음)
    서버에 닿지 않으면 content.js 의 편지로 대신 보여줍니다.
    ──────────────────────────────────────────────────────────── */
 
@@ -12,7 +12,7 @@ import { letters as presetLetters, letterApi, LETTER_SLOTS } from '../data/conte
 export const letters = Array.from({ length: LETTER_SLOTS }, (_, i) => {
   const p = presetLetters[i];
   return p && p.text
-    ? { from: p.from, text: p.text, locked: true, empty: false }
+    ? { from: p.from, text: p.text, locked: false, empty: false }
     : { from: '', text: '', locked: false, empty: true };
 });
 
@@ -54,20 +54,21 @@ const ERR = {
   bad_author: '이름을 1~20자로 적어주세요.',
   bad_body: '편지를 1~1000자로 적어주세요.',
   bad_pin: '비밀번호는 숫자 4자리예요.',
+  bad_new_pin: '새 비밀번호는 숫자 4자리예요.',
   locked: '이 편지는 수정할 수 없어요.',
   too_many_tries: '비밀번호를 여러 번 틀려서 10분 동안 잠겼어요.',
   wrong_pin: '비밀번호가 맞지 않아요.',
 };
 
 /**
- * 편지 쓰기/수정. 성공하면 'created' | 'updated' 를 돌려주고, 실패하면 사용자에게 보여줄 문장으로 에러를 던짐.
+ * 편지 쓰기/수정 (newPin 을 주면 비밀번호도 바꿈). 성공하면 'created' | 'updated' 를 돌려주고, 실패하면 사용자에게 보여줄 문장으로 에러를 던짐.
  */
-export async function writeLetter(slot, from, text, pin) {
+export async function writeLetter(slot, from, text, pin, newPin = '') {
   let res;
   try {
     res = await fetch(`${letterApi.url}/rest/v1/rpc/write_bouquet_letter`, {
       method: 'POST', headers: headers(),
-      body: JSON.stringify({ p_slot: slot, p_author: from, p_body: text, p_pin: pin }),
+      body: JSON.stringify({ p_slot: slot, p_author: from, p_body: text, p_pin: pin, p_new_pin: newPin || null }),
     });
   } catch {
     throw new Error('인터넷 연결을 확인해 주세요.');
