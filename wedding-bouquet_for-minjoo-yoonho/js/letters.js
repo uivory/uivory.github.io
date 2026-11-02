@@ -1,4 +1,4 @@
-import { letters as presetLetters, letterApi, LETTER_SLOTS, LETTER_MAX } from '../data/content.js?v=20261102f';
+import { letters as presetLetters, letterApi, LETTER_SLOTS, LETTER_MAX } from '../data/content.js?v=20261102g';
 
 /* ────────────────────────────────────────────────────────────
    편지 저장소 (Supabase)
@@ -107,22 +107,31 @@ export async function writeLetter(slot, from, text, pin, newPin = '') {
  * 그 사이 다른 친구가 같은 칸을 차지했으면 'taken' 에러. 성공하면 실제로 저장된 칸 번호를 돌려줌.
  */
 export async function addLetter(slot, from, text, pin) {
-  let res;
+  const call = async (p_slot) => {
+    let res;
+    try {
+      res = await fetch(`${letterApi.url}/rest/v1/rpc/add_bouquet_letter`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ p_author: from, p_body: text, p_pin: pin || null, p_slot }),
+      });
+    } catch {
+      throw new Error('인터넷 연결을 확인해 주세요.');
+    }
+    const data = await res.json().catch(() => null);
+    if (!res.ok) { const e = new Error(data?.message || ''); e.code = data?.message || ''; throw e; }
+    return Number(data);
+  };
+  let s;
   try {
-    res = await fetch(`${letterApi.url}/rest/v1/rpc/add_bouquet_letter`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ p_author: from, p_body: text, p_pin: pin || null, p_slot: slot }),
-    });
-  } catch {
-    throw new Error('인터넷 연결을 확인해 주세요.');
+    s = await call(slot);
+  } catch (e) {
+    if (e.code === 'taken' || e.code === 'bad_slot') {
+      // 그 사이 다른 친구가 같은 칸에 썼으면 → 서버가 고른 다음 빈 칸(없으면 새 칸)에 그대로 저장
+      try { s = await call(null); } catch (e2) { throw new Error(ERR[e2.code] || e2.message || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.'); }
+    } else {
+      throw new Error(ERR[e.code] || e.message || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    }
   }
-  const data = await res.json().catch(() => null);
-  if (!res.ok) {
-    const code = data?.message || '';
-    if (code === 'taken' || code === 'bad_slot') refreshLetters(true);
-    throw new Error(ERR[code === 'bad_slot' ? 'taken' : code] || '저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
-  }
-  const s = Number(data);
   while (letters.length <= s) letters.push(blank());
   letters[s] = { from: from.trim(), text: text.trim(), locked: false, empty: false };
   listeners.forEach((fn) => fn());

@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three/three.module.min.js?v=r170';
-import { WALL_Z, wallBlob } from './room.js?v=20261102f';
+import { WALL_Z, wallBlob } from './room.js?v=20261102g';
 
 /* ────────────────────────────────────────────────────────────
    포토월 — 가운데 "Wedding Day!" 포스터 + 주변에 자연스럽게 붙인 사진들.
