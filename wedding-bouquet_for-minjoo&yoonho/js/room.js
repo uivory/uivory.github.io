@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../vendor/three/three.module.min.js?v=r170';
 
 export const WALL_Z = -0.95;
 export const TABLE_TOP_Y = 0.66;

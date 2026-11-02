@@ -1,5 +1,5 @@
-import { placeholderCanvas } from './wall.js';
-import { letters, writeLetter, refreshLetters, onLettersChange } from './letters.js';
+import { placeholderCanvas } from './wall.js?v=20261102c';
+import { letters, writeLetter, refreshLetters, onLettersChange } from './letters.js?v=20261102c';
 
 const $ = (id) => document.getElementById(id);
 const store = {
