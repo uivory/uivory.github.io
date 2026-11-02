@@ -125,25 +125,63 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
     hooks.onLetterClose?.();
   }
   $('letter-close').onclick = closeLetter;
-  $('letter-prev').onclick = () => openLetter(cur - 1);
-  $('letter-next').onclick = () => openLetter(cur + 1);
-  // 아래로 쓸어내려 닫기
+  // 좌우로 밀어서 이전/다음 편지, 아래로 쓸어내려 닫기
   {
-    let y0 = null, dy = 0;
-    paper.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; y0 = e.clientY; dy = 0; });
+    let x0 = null, y0 = 0, dx = 0, dy = 0, axis = null;
+    paper.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('button')) return;
+      x0 = e.clientX; y0 = e.clientY; dx = dy = 0; axis = null;
+    });
     paper.addEventListener('pointermove', (e) => {
-      if (y0 === null) return;
-      dy = e.clientY - y0;
-      if (dy > 0 && paper.scrollTop === 0) { paper.style.transition = 'none'; paper.style.transform = `translateY(${dy}px) rotate(-.6deg)`; }
+      if (x0 === null) return;
+      dx = e.clientX - x0; dy = e.clientY - y0;
+      if (!axis && Math.hypot(dx, dy) > 10) axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      if (axis === 'x') {
+        paper.style.transition = 'none';
+        paper.style.transform = `translateX(${dx}px) rotate(${-0.6 + dx * 0.012}deg)`;
+        paper.style.opacity = String(1 - Math.min(0.5, Math.abs(dx) / 500));
+      } else if (axis === 'y' && dy > 0 && paper.scrollTop === 0) {
+        paper.style.transition = 'none';
+        paper.style.transform = `translateY(${dy}px) rotate(-.6deg)`;
+      }
     });
     const end = () => {
-      if (y0 === null) return;
-      paper.style.transition = ''; paper.style.transform = '';
-      if (dy > 80 && paper.scrollTop === 0) closeLetter();
-      y0 = null;
+      if (x0 === null) return;
+      x0 = null;
+      if (axis === 'x' && Math.abs(dx) > 60) { flip(dx < 0 ? 1 : -1); return; }
+      paper.style.transition = ''; paper.style.transform = ''; paper.style.opacity = '';
+      if (axis === 'y' && dy > 80 && paper.scrollTop === 0) closeLetter();
     };
-    paper.addEventListener('pointerup', end); paper.addEventListener('pointercancel', end);
+    paper.addEventListener('pointerup', end);
+    paper.addEventListener('pointercancel', end);
+    // 트랙패드/마우스 가로 스크롤
+    let wheelLock = 0;
+    paper.addEventListener('wheel', (e) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 25) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (now < wheelLock) return;
+      wheelLock = now + 600;
+      flip(e.deltaX > 0 ? 1 : -1);
+    }, { passive: false });
   }
+  /** 편지를 옆으로 밀어내고 다음/이전 편지를 반대편에서 들여옴 */
+  function flip(dir) {
+    if (cur < 0) return;
+    paper.style.transition = 'transform .2s ease-in, opacity .2s';
+    paper.style.transform = `translateX(${-dir * 110}%) rotate(${-dir * 4}deg)`;
+    paper.style.opacity = '0';
+    setTimeout(() => {
+      openLetter(cur + dir);
+      paper.style.transition = 'none';
+      paper.style.transform = `translateX(${dir * 60}%) rotate(${dir * 3}deg)`;
+      void paper.offsetWidth;
+      paper.style.transition = '';
+      paper.style.transform = ''; paper.style.opacity = '';
+    }, 190);
+  }
+  $('letter-prev').onclick = () => flip(-1);
+  $('letter-next').onclick = () => flip(1);
 
   /* ───── 사진 라이트박스 ───── */
   const lb = $('lightbox'), card = $('lb-card'), lbImg = $('lb-img'), dots = $('lb-dots');
@@ -226,7 +264,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { closePhoto(); closeLetter(); }
     else if (pi >= 0) { if (e.key === 'ArrowRight') slide(1); if (e.key === 'ArrowLeft') slide(-1); }
-    else if (cur >= 0) { if (e.key === 'ArrowRight') openLetter(cur + 1); if (e.key === 'ArrowLeft') openLetter(cur - 1); }
+    else if (cur >= 0) { if (e.key === 'ArrowRight') flip(1); if (e.key === 'ArrowLeft') flip(-1); }
   });
 
   /* ───── 음악 ───── */

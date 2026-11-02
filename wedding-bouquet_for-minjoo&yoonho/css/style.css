@@ -98,7 +98,7 @@ body.reading #bottombar, body.viewing #bottombar { opacity: 0; transform: transl
   padding: 0 14px calc(14px + var(--safe-b));
 }
 .sheet .paper {
-  position: relative; width: min(100%, 430px); max-height: 62vh; overflow: auto; pointer-events: auto;
+  position: relative; width: min(100%, 430px); max-height: 62vh; overflow: auto; pointer-events: auto; touch-action: pan-y; overscroll-behavior: contain;
   padding: 34px 28px 18px; border-radius: 6px 6px 18px 18px;
   background:
     repeating-linear-gradient(transparent 0 33px, rgba(205, 190, 160, .35) 33px 34px),

@@ -202,10 +202,11 @@ export function buildRoom() {
   rim.position.y = TABLE_TOP_Y - 0.03;
   const under = new THREE.Mesh(
     new THREE.CylinderGeometry(R - 0.02, R - 0.04, 0.02, 48),
-    new THREE.MeshStandardMaterial({ color: '#cfcac1', roughness: 0.7 }),
+    new THREE.MeshStandardMaterial({ color: '#efece6', roughness: 0.6 }),
   );
   under.position.y = TABLE_TOP_Y - 0.05;
-  const steel = new THREE.MeshStandardMaterial({ color: '#d8d9db', metalness: 0.85, roughness: 0.32 });
+  // 다리/받침: 공간에 어울리는 무광 화이트 (분체도장 느낌)
+  const steel = new THREE.MeshStandardMaterial({ color: '#f6f4ef', metalness: 0.05, roughness: 0.42 });
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.038, TABLE_TOP_Y - 0.06, 32), steel);
   stem.position.y = (TABLE_TOP_Y - 0.06) / 2 + 0.015;
   const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.022, 56), steel);
