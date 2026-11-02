@@ -188,6 +188,9 @@ function makeDog(kind) {
 }
 
 /* ───────── 동작(애니메이션) ───────── */
+const BEG_DUR = 2.8;
+const SPIN_DUR = 1.1;
+
 export function createDogs() {
   const dogs = [makeDog('pom'), makeDog('bichon')].map((d, i) => {
     d.name = d.kind === 'pom' ? '폼피츠' : '비숑';
@@ -199,6 +202,7 @@ export function createDogs() {
     d.lookYaw = 0; d.lookPitch = 0;
     d.tilt = 0; d.tiltT = 3 + Math.random() * 4; d.tiltTarget = 0;
     d.excited = 0;
+    d.beg = 0; d.spinT = 0;
     return d;
   });
 
@@ -218,6 +222,23 @@ export function createDogs() {
       d.lookPitch += (look.pitch - d.lookPitch) * Math.min(1, dt * 4);
       d.head.rotation.set(-d.lookPitch * 0.3 + Math.sin(t * 1.3 + d.seed) * 0.02, d.lookYaw * 0.55, d.tilt + d.hop * 0.15);
 
+      // 앞발 들고 애교 (뒷다리 쪽을 축으로 몸을 세우고 앞발을 까딱까딱)
+      if (d.beg > 0) d.beg = Math.max(0, d.beg - dt);
+      const begAmt = d.beg > 0 ? Math.min(1, (BEG_DUR - d.beg) * 4, d.beg * 4) : 0;
+      const paw = Math.sin(t * 11 + d.seed) * 0.07 * begAmt;
+      d.bodyG.rotation.x = -0.62 * begAmt + paw;
+      d.bodyG.position.y = 0.06 * begAmt;
+      d.head.rotation.x += 0.52 * begAmt - paw * 0.8;
+      d.head.rotation.z += Math.sin(t * 3 + d.seed) * 0.18 * begAmt;
+
+      // 빙글 한 바퀴
+      if (d.baseYaw === undefined) d.baseYaw = d.root.rotation.y;
+      if (d.spinT > 0) d.spinT = Math.max(0, d.spinT - dt / SPIN_DUR);
+      const sp = 1 - d.spinT;
+      const ease = d.spinT > 0 ? sp * sp * (3 - 2 * sp) : 0;
+      d.root.rotation.y = d.baseYaw + ease * Math.PI * 2;
+      if (d.spinT > 0) d.root.position.y += Math.sin(sp * Math.PI) * 0.05 * d.scale;
+
       d.excited = Math.max(0, d.excited - dt * 0.5);
       const wag = Math.sin(t * (4 + d.excited * 16) + d.seed) * (0.12 + d.excited * 0.55);
       d.tailG.rotation.z = wag;
@@ -232,6 +253,8 @@ export function createDogs() {
   }
 
   function poke(d) { d.hop = 1; d.excited = 1; d.blink = 0.4; }
+  function beg() { dogs.forEach((d, i) => { d.beg = BEG_DUR + i * 0.2; d.excited = 1; }); }
+  function spin() { dogs.forEach((d, i) => setTimeout(() => { d.spinT = 1; d.excited = 1; }, i * 220)); }
 
-  return { dogs, update, poke };
+  return { dogs, update, poke, beg, spin };
 }

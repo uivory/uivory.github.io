@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { site, letters as allLetters, photos, music } from '../data/content.js';
+import { site, letters as allLetters, photos, poster, music } from '../data/content.js';
 import { buildRoom, TABLE_TOP_Y, WALL_Z, blobShadow, canvasTexture } from './room.js';
 import { loadBouquet } from './bouquet.js';
 import { createDogs } from './dogs.js';
@@ -64,7 +64,9 @@ const dogHits = [pom, bichon].map((d) => {
 });
 
 /* ───────── photo wall ───────── */
-const wall = buildWall(photos);
+// 포토월/라이트박스 순서: 포스터 → 사진들
+const gallery = [poster, ...photos];
+const wall = buildWall(gallery);
 scene.add(wall.group);
 
 /* ───────── bouquet (비동기) ───────── */
@@ -131,10 +133,10 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   const mode = camera.aspect < 0.9 ? 'tall' : 'wide';
-  const fitH = mode === 'tall' ? 2.9 : 2.5;
+  const fitH = mode === 'tall' ? 2.9 : 3.2;
   const fitW = mode === 'tall' ? 1.5 : 3.4;
   view.dist0 = Math.max(fitH / 2 / tanHalf, fitW / camera.aspect / 2 / tanHalf);
-  view.lookY = mode === 'tall' ? 1.1 : 0.92;
+  view.lookY = mode === 'tall' ? 1.1 : 1.3;
   if (mode !== view.mode || !wall.mode) { view.mode = mode; wall.layout(mode); }
   camera.updateProjectionMatrix();
 }
@@ -284,6 +286,34 @@ function handleTap(cx, cy, dbl) {
     const s = worldToScreen(hit.point);
     ui.pop(s.x, s.y - 30, '🤍');
     ui.pop(s.x + (Math.random() - 0.5) * 50, s.y - 70, hit.dog.say, true);
+    dogCombo(s);
+  }
+}
+/* 강아지 연타 → 랜덤 이벤트 */
+const combo = { n: 0, t: 0, cool: 0, last: '' };
+function dogCombo(s) {
+  const now = performance.now();
+  combo.n = now - combo.t < 650 ? combo.n + 1 : 1;
+  combo.t = now;
+  if (combo.n < 4 || now < combo.cool) return;
+  combo.n = 0; combo.cool = now + 3200;
+  const events = ['confetti', 'beg', 'spin', 'hearts'].filter((e) => e !== combo.last);
+  const ev = events[Math.floor(Math.random() * events.length)];
+  combo.last = ev;
+  const both = dogCtl.dogs;
+  const at = (d) => worldToScreen(d.root.localToWorld(new THREE.Vector3(0, 0.42, 0)));
+  if (ev === 'confetti') {
+    ui.confetti(s.x, s.y - 20);
+    both.forEach((d, i) => setTimeout(() => dogCtl.poke(d), i * 160));
+  } else if (ev === 'beg') {
+    dogCtl.beg();
+    both.forEach((d, i) => { const p = at(d); setTimeout(() => { ui.pop(p.x, p.y - 20, '💕'); ui.pop(p.x, p.y - 60, i ? '헤헤' : '이뻐해줘요', true); }, 300 + i * 250); });
+  } else if (ev === 'spin') {
+    dogCtl.spin();
+    both.forEach((d, i) => { const p = at(d); setTimeout(() => ui.pop(p.x, p.y - 50, i ? '빙글!' : '뱅글~', true), 200 + i * 200); });
+  } else {
+    ui.rain('🤍', 22);
+    both.forEach((d, i) => { dogCtl.poke(d); const p = at(d); setTimeout(() => ui.pop(p.x, p.y - 60, '사랑해요!', true), i * 300); });
   }
 }
 function spark(x, y) { ui.pop(x, y, ['✨', '🌸', '🤍'][Math.floor(Math.random() * 3)]); }
@@ -389,7 +419,7 @@ function updateHover(x, y) {
 
 /* ───────── UI ───────── */
 ui = createUI({
-  site, letters, photos, music,
+  site, letters, photos: gallery, music,
   flowerInfo: (i) => bq?.flowers[i]?.label ?? { icon: '🌸', ko: '꽃' },
   hooks: {
     onLetter: (i) => focusFlower(i),
@@ -514,5 +544,5 @@ window.__bq = {
   get ready() { return !!bq; },
   view, camera, flowerScreen: (i) => worldToScreen(bq.flowers[i].mesh.getWorldPosition(new THREE.Vector3())),
   photoScreen: (i) => photoScreenInfo(wall.items[i]), dogScreen: (i) => worldToScreen(dogHits[i].getWorldPosition(new THREE.Vector3())),
-  tap: (x, y) => handleTap(x, y, false), ui,
+  tap: (x, y) => handleTap(x, y, false), ui, dogs: dogCtl,
 };

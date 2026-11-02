@@ -1,3 +1,9 @@
+/* 나눔손글씨 (OFL-1.1, 자주 쓰는 한글 2,350자로 서브셋) */
+@font-face { font-family: 'NanumSonPyeonJi'; src: url(../assets/fonts/sonpyeonjiche.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: 'NanumGyuriDiary'; src: url(../assets/fonts/gyuli-ui-ilgi.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: 'NanumParkKyungA'; src: url(../assets/fonts/jinju-baggyeong-ache.woff2) format('woff2'); font-display: swap; }
+@font-face { font-family: 'NanumAgiSarang'; src: url(../assets/fonts/agisalangche.woff2) format('woff2'); font-display: swap; }
+
 :root {
   --wall: #ddd8ce;
   --ink: #4a443c;
@@ -30,6 +36,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
   display: flex; justify-content: space-between; align-items: flex-start;
   padding: calc(14px + var(--safe-t)) 16px 0; pointer-events: none;
 }
+.brand { text-shadow: 0 0 8px rgba(255,253,246,.95), 0 0 2px rgba(255,253,246,.9); }
 .brand h1 { margin: 0; font: 700 15px/1.2 var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--ink); opacity: .82; }
 .brand p { margin: 4px 0 0; font-size: 12px; color: var(--ink-soft); }
 .tools { display: flex; gap: 8px; pointer-events: auto; }
@@ -72,6 +79,7 @@ body.reading #bottombar, body.viewing #bottombar { opacity: 0; transform: transl
 }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+#confetti { position: fixed; inset: 0; z-index: 7; pointer-events: none; width: 100%; height: 100%; }
 #pops { position: fixed; inset: 0; z-index: 6; pointer-events: none; overflow: hidden; }
 .pop { position: absolute; transform: translate(-50%, -50%); font-size: 22px; animation: rise 1.3s ease-out forwards; white-space: nowrap; }
 .pop.say { font: 700 15px var(--hand); font-size: 20px; padding: 4px 12px; border-radius: 14px; background: #fff; color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,.12); }
@@ -90,7 +98,7 @@ body.reading #bottombar, body.viewing #bottombar { opacity: 0; transform: transl
   padding: 0 14px calc(14px + var(--safe-b));
 }
 .sheet .paper {
-  position: relative; width: min(100%, 430px); max-height: 62vh; overflow: auto; pointer-events: auto;
+  position: relative; width: min(100%, 430px); max-height: 62vh; overflow: auto; pointer-events: auto; touch-action: pan-y; overscroll-behavior: contain;
   padding: 34px 28px 18px; border-radius: 6px 6px 18px 18px;
   background:
     repeating-linear-gradient(transparent 0 33px, rgba(205, 190, 160, .35) 33px 34px),
@@ -101,20 +109,22 @@ body.reading #bottombar, body.viewing #bottombar { opacity: 0; transform: transl
   transition: transform .55s cubic-bezier(.2, .9, .25, 1.05), opacity .3s;
 }
 .sheet.open .paper { transform: translateY(0) rotate(-.6deg); opacity: 1; }
-.sheet .tape-l { left: 18px; top: -9px; transform: rotate(-6deg); }
-.sheet .tape-r { right: 18px; top: -9px; transform: rotate(5deg); width: 62px; }
+.sheet .tape { clip-path: none; box-shadow: none; background: url(../assets/tapes/tape05.png) center/100% 100% no-repeat; height: 28px; width: 92px; opacity: .95; }
+.sheet .tape-l { left: 14px; top: -12px; transform: rotate(-6deg); }
+.sheet .tape-r { right: 14px; top: -12px; transform: rotate(5deg); width: 78px; background-image: url(../assets/tapes/tape08.png); }
 .x {
   position: absolute; right: 10px; top: 8px; width: 34px; height: 34px; border-radius: 50%; font-size: 24px; line-height: 1;
   color: var(--ink-soft); display: grid; place-items: center; z-index: 3;
 }
 .x:active { background: rgba(0,0,0,.05); }
-.chip { display: inline-block; font-size: 12px; padding: 3px 11px; border-radius: 999px; background: #f8e6e8; color: #b0616c; margin-bottom: 10px; }
-.sheet .body { margin: 0; font: 400 25px/34px var(--hand); color: var(--ink); white-space: pre-line; word-break: keep-all; overflow-wrap: break-word; min-height: 102px; }
+.chip { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 13px 4px 11px; border-radius: 999px; background: #e9f1dc; color: #5d7044; margin-bottom: 10px; font-size: 12px; letter-spacing: .04em; }
+.chip b { font: 400 22px/1 var(--letter-font, var(--hand)); letter-spacing: 0; color: #4c5e36; }
+.sheet .body { margin: 0; font: 400 var(--letter-size, 25px)/34px var(--letter-font, var(--hand)); color: var(--ink); white-space: pre-line; word-break: keep-all; overflow-wrap: break-word; min-height: 102px; }
 .sheet .from { margin: 8px 0 0; text-align: right; font: 700 24px/34px var(--hand); color: #b0616c; }
 .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
 .pager button { width: 38px; height: 34px; border-radius: 17px; font-size: 24px; line-height: 1; color: var(--ink-soft); }
 .pager button:active { background: rgba(0,0,0,.06); }
-.sheet .paper.swap .body, .sheet .paper.swap .from, .sheet .paper.swap .chip { animation: swap .38s ease; }
+.sheet .paper.swap .body, .sheet .paper.swap .chip { animation: swap .38s ease; }
 @keyframes swap { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: none; } }
 
 @media (min-width: 760px) {
@@ -132,12 +142,11 @@ body.reading #bottombar, body.viewing #bottombar { opacity: 0; transform: transl
 .lb-x { position: absolute; top: calc(12px + var(--safe-t)); right: 12px; color: #fff; font-size: 28px; width: 42px; height: 42px; }
 .lb-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: 64px 16px 92px; touch-action: pan-y; }
 .lb-card {
-  position: relative; margin: 0; padding: 12px 12px 14px; background: #fffdf8; border-radius: 3px; max-width: min(92vw, 860px);
+  position: relative; margin: 0; padding: 10px; background: #fffdf8; border-radius: 3px; max-width: min(92vw, 860px);
   box-shadow: 0 24px 70px rgba(0,0,0,.4); transform-origin: center; will-change: transform, opacity;
 }
-.lb-card img { display: block; max-width: 100%; max-height: calc(100vh - 230px); max-height: calc(100dvh - 230px); border-radius: 1px; background: #eee; }
-.lb-card figcaption { margin-top: 10px; text-align: center; font: 400 22px/1.2 var(--hand); color: var(--ink); min-height: 1.2em; }
-.lb-card .tape-t { left: 50%; top: -11px; margin-left: -37px; transform: rotate(-3deg); }
+.lb-card img { display: block; max-width: 100%; max-height: calc(100vh - 190px); max-height: calc(100dvh - 190px); border-radius: 1px; background: #eee; }
+.lb-card .tape-t { left: 50%; top: -16px; width: 120px; height: 34px; margin-left: -60px; transform: rotate(-3deg); clip-path: none; background: url(../assets/tapes/tape03.png) center/100% 100% no-repeat; box-shadow: none; opacity: .95; }
 .lb-nav {
   position: absolute; top: 50%; margin-top: -22px; width: 44px; height: 44px; border-radius: 50%; font-size: 28px; line-height: 1; color: #fff;
   background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.3); backdrop-filter: blur(6px);
