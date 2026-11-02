@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { site, letters as allLetters, photos, poster, music } from '../data/content.js';
+import { site, photos, poster, music } from '../data/content.js';
+import { letters, refreshLetters } from './letters.js';
 import { buildRoom, TABLE_TOP_Y, WALL_Z, blobShadow, canvasTexture } from './room.js';
 import { loadBouquet } from './bouquet.js';
 import { createDogs } from './dogs.js';
@@ -82,7 +83,6 @@ bqShadow.position.set(0.04, TABLE_TOP_Y + 0.003, 0.02);
 scene.add(bqShadow);
 
 let bq = null;
-let letters = allLetters;
 let ui = null;
 
 /* 반짝이 (안 읽은 꽃 표시) */
@@ -270,6 +270,8 @@ function photoScreenInfo(item) {
 }
 
 function handleTap(cx, cy, dbl) {
+  // 편지를 쓰는 중에는 장면을 눌러도 아무 일도 일어나지 않게 (쓰던 내용 보호)
+  if (ui.editing) { document.activeElement?.blur?.(); return; }
   const hit = pick(cx, cy);
   if (!hit) {
     if (ui.letterOpen) ui.closeLetter();
@@ -419,7 +421,7 @@ function updateHover(x, y) {
 
 /* ───────── UI ───────── */
 ui = createUI({
-  site, letters, photos: gallery, music,
+  site, photos: gallery, music,
   flowerInfo: (i) => bq?.flowers[i]?.label ?? { icon: '🌸', ko: '꽃' },
   hooks: {
     onLetter: (i) => focusFlower(i),
@@ -508,7 +510,6 @@ function frame() {
   try {
     bq = await loadBouquet();
     spin.add(bq.group);
-    letters = allLetters.slice(0, bq.flowers.length);
     $('read-total').textContent = letters.length;
     bq.flowers.forEach((f) => {
       if (ui.isRead(f.index)) f.read = true;
@@ -526,6 +527,7 @@ function frame() {
     $('loader').querySelector('p').textContent = '부케를 불러오지 못했어요. 새로고침 해주세요.';
     return;
   }
+  refreshLetters(true);
   renderer.setAnimationLoop(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => $('loader').classList.add('done')));
 
