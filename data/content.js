@@ -40,17 +40,19 @@ export const letters = [
 
 // ─── 결혼 사진 ────────────────────────────────────────────────
 // assets/photos/ 폴더에 사진을 넣고 파일명을 맞춰주세요.
-// (파일이 없으면 임시 사진 카드가 대신 표시됩니다.)
-// 벽에는 앞의 14장이 마스킹테이프로 붙고, 나머지는 사진을 넘길 때 이어서 나옵니다.
+// (파일이 없으면 임시 사진 카드가 대신 표시됩니다. caption 은 자유롭게 바꿔주세요.)
+// 벽에는 세로 화면 11장 · 가로 화면 12장이 마스킹테이프로 붙고, 나머지는 사진을 넘길 때 이어서 나옵니다.
 export const photos = [
-  { src: 'assets/photos/01.jpg', caption: '식장 입구에서' },
-  { src: 'assets/photos/02.jpg', caption: '입장 직전, 떨리던 순간' },
-  { src: 'assets/photos/03.jpg', caption: '서약' },
-  { src: 'assets/photos/04.jpg', caption: '부케 던지던 순간' },
-  { src: 'assets/photos/05.jpg', caption: '친구들과 한 컷' },
-  { src: 'assets/photos/06.jpg', caption: '행진' },
-  { src: 'assets/photos/07.jpg', caption: '웃음이 터진 순간' },
-  { src: 'assets/photos/08.jpg', caption: '가족사진' },
-  { src: 'assets/photos/09.jpg', caption: '뒤풀이' },
-  { src: 'assets/photos/10.jpg', caption: '우리 모두 행복했던 날' },
+  { src: 'assets/photos/01.jpg', caption: '나무 그늘 아래 둘이서' },
+  { src: 'assets/photos/02.jpg', caption: '번쩍 안아 올린 순간' },
+  { src: 'assets/photos/03.jpg', caption: '초록 길을 함께 걸으며' },
+  { src: 'assets/photos/04.jpg', caption: '손끝을 맞잡고' },
+  { src: 'assets/photos/05.jpg', caption: '마주 보고 앉아서' },
+  { src: 'assets/photos/06.jpg', caption: '레이스 스카프 커플' },
+  { src: 'assets/photos/07.jpg', caption: '선글라스 끼고 한 컷' },
+  { src: 'assets/photos/08.jpg', caption: '가로등 아래 벤치에서' },
+  { src: 'assets/photos/09.jpg', caption: '달밤의 입맞춤' },
+  { src: 'assets/photos/10.jpg', caption: '밤 풀밭에서 한 바퀴' },
+  { src: 'assets/photos/11.jpg', caption: '베일 쓰고 찰칵' },
+  { src: 'assets/photos/12.jpg', caption: '반지 자랑' },
 ];
