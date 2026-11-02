@@ -1,5 +1,5 @@
-import { placeholderCanvas } from './wall.js?v=20261102e';
-import { letters, writeLetter, addLetter, ensureEmptySlot, refreshLetters, onLettersChange, LETTER_MAX } from './letters.js?v=20261102e';
+import { placeholderCanvas } from './wall.js?v=20261102f';
+import { letters, writeLetter, addLetter, ensureEmptySlot, refreshLetters, onLettersChange, LETTER_MAX, LETTER_SLOTS } from './letters.js?v=20261102f';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -201,12 +201,13 @@ export function createUI({ site, photos, music, hooks }) {
   const cta = $('cta');
   const firstEmpty = () => letters.findIndex((l) => l.empty);
   function updateCta() {
-    // 빈 칸이 없어도 칸을 늘려 계속 쓸 수 있으니, 최대(50통)까지 다 찼을 때만 "편지 읽기"
-    const full = firstEmpty() < 0 && letters.length >= LETTER_MAX;
+    // 편지가 17통(꽃 17송이) 이상 모이면 "편지 읽기"로. 그 뒤로도 편지함 목록의 ⊕ 로 계속 쓸 수 있어요
+    const full = letters.filter((l) => !l.empty).length >= LETTER_SLOTS;
     cta.textContent = full ? '📖 편지 읽기' : '✍️ 편지 남기기';
     cta.classList.toggle('read', full);
   }
   cta.onclick = () => {
+    if (cta.classList.contains('read')) { openLetter(0); return; }
     const i = ensureEmptySlot();
     if (i < 0) { openLetter(0); return; }
     openLetter(i);

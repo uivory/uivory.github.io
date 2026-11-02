@@ -1,4 +1,4 @@
-import { letters as presetLetters, letterApi, LETTER_SLOTS, LETTER_MAX } from '../data/content.js?v=20261102e';
+import { letters as presetLetters, letterApi, LETTER_SLOTS, LETTER_MAX } from '../data/content.js?v=20261102f';
 
 /* ────────────────────────────────────────────────────────────
    편지 저장소 (Supabase)
@@ -8,7 +8,7 @@ import { letters as presetLetters, letterApi, LETTER_SLOTS, LETTER_MAX } from '.
    서버에 닿지 않으면 content.js 의 편지로 대신 보여줍니다.
    ──────────────────────────────────────────────────────────── */
 
-export { LETTER_MAX };
+export { LETTER_MAX, LETTER_SLOTS };
 const blank = () => ({ from: '', text: '', locked: false, empty: true });
 
 /** @type {{from: string, text: string, locked: boolean, empty: boolean}[]} */
