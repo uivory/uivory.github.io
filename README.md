@@ -11,8 +11,8 @@
 
 ## 내용 바꾸기
 
-사이트 파일은 **`wedding-bouquet_for-minjoo&yoonho/`** 폴더에 있어요 → 주소: `https://uivory.github.io/wedding-bouquet_for-minjoo&yoonho/`
-(루트 `https://uivory.github.io/` 로 들어와도 자동으로 이동해요.)
+사이트 파일은 **`wedding-bouquet_for-minjoo-yoonho/`** 폴더에 있어요 → 주소: `https://uivory.github.io/wedding-bouquet_for-minjoo-yoonho/`
+(루트 `https://uivory.github.io/` 나 예전 주소 `…/wedding-bouquet_for-minjoo&yoonho/` 로 들어와도 자동으로 이동해요.)
 
 모든 문구/사진/음악 설정은 **`data/content.js`** 한 파일에 있어요. (아래 경로는 모두 이 폴더 기준)
 
@@ -49,13 +49,13 @@ assets/audio/oh-yeah.mp3
 
 ## 배포 (GitHub Pages)
 
-빌드 과정이 없는 순수 정적 사이트예요. `main` 브랜치 루트를 Pages 로 배포하면 `https://uivory.github.io/wedding-bouquet_for-minjoo&yoonho/` 에서 열려요.
+빌드 과정이 없는 순수 정적 사이트예요. `main` 브랜치 루트를 Pages 로 배포하면 `https://uivory.github.io/wedding-bouquet_for-minjoo-yoonho/` 에서 열려요.
 주소를 바꾸고 싶으면 폴더 이름과 루트 `index.html` 의 이동 경로를 같이 바꾸면 돼요.
 
 로컬에서 확인하려면 (ES 모듈이라 `file://` 로는 안 열려요):
 
 ```bash
-python3 -m http.server 8000   # → http://localhost:8000/wedding-bouquet_for-minjoo&yoonho/
+python3 -m http.server 8000   # → http://localhost:8000/wedding-bouquet_for-minjoo-yoonho/
 ```
 
 ## 구성
