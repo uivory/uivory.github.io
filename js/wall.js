@@ -1,29 +1,53 @@
 import * as THREE from 'three';
-import { WALL_Z, canvasTexture, wallBlob } from './room.js';
+import { WALL_Z, wallBlob } from './room.js';
 
-/* 벽에 붙는 위치 슬롯 — [x, y, 최대 변 길이, 기울기(°)]
-   tall = 세로(모바일) 화면, wide = 가로(데스크톱) 화면 */
-const SLOTS = {
-  tall: [
-    [-0.44, 1.9, 0.3, -4], [0.04, 1.87, 0.28, 3], [0.5, 1.92, 0.3, 5],
-    [-0.46, 2.24, 0.31, 3], [0.06, 2.21, 0.3, -3], [0.5, 2.27, 0.29, -5],
-    [-0.44, 2.58, 0.29, -3], [0.04, 2.55, 0.3, 4], [0.5, 2.6, 0.28, -4],
-    [-0.66, 1.42, 0.24, -6], [0.68, 1.38, 0.24, 5],
-  ],
-  wide: [
-    [-1.42, 1.7, 0.46, -4], [-0.98, 2.02, 0.38, 3], [-1.62, 1.1, 0.4, 5], [-1.06, 1.36, 0.32, -6],
-    [1.42, 1.72, 0.44, 5], [0.98, 2.04, 0.36, -4], [1.62, 1.06, 0.42, -5], [1.04, 1.34, 0.32, 6],
-    [-0.36, 2.08, 0.36, -3], [0.34, 2.12, 0.34, 4], [0.0, 1.86, 0.28, 2], [-0.92, 0.78, 0.28, 4],
-  ],
-};
-export const MAX_ON_WALL = SLOTS.wide.length;
+/* ────────────────────────────────────────────────────────────
+   포토월 — 가운데 "Wedding Day!" 포스터 + 주변에 자연스럽게 붙인 사진들.
+   슬롯: [x, y, 높이, 가로세로비(null=원본), 기울기(°), 세로 크롭 기준(0=위,1=아래)]
+   0번 슬롯 = 포스터
+   ──────────────────────────────────────────────────────────── */
 
-const PASTELS = [
-  ['#f9e4e6', '#f3cdd3'], ['#e8f0e2', '#cfe2c6'], ['#fdf1d8', '#f7dfae'], ['#e6ecf6', '#cdd9ee'],
-  ['#f6e5f0', '#ead0e2'], ['#eef3df', '#dbe6bd'],
+// 포스터 높이를 1 로 둔 콜라주 배치 (가로 화면에서 확대해 사용)
+const UNIT = [
+  [0, 0, 1, null, 0, 0.5],                 // 포스터
+  [-0.24, 0.69, 0.34, 1.0, -2.5, 0.35],    // 위 왼쪽 (정사각)
+  [0.2, 0.73, 0.42, 0.75, 3, 0.4],         // 위 오른쪽
+  [-0.63, 0.24, 0.5, 0.75, -3, 0.5],       // 왼쪽 큰 세로
+  [-0.62, -0.35, 0.36, 1.3, 2, 0.55],      // 왼쪽 아래 가로
+  [-1.04, 0.52, 0.3, 1.0, 4, 0.4],         // 왼쪽 바깥 위
+  [-1.06, -0.04, 0.42, 0.75, -2, 0.5],     // 왼쪽 바깥
+  [0.62, 0.3, 0.46, 0.75, 2, 0.5],         // 오른쪽 큰 세로
+  [0.6, -0.3, 0.3, 1.0, -4, 0.45],         // 오른쪽 아래 정사각
+  [1.0, 0.54, 0.32, 1.3, -2, 0.4],         // 오른쪽 바깥 위 가로
+  [1.02, -0.02, 0.42, 0.75, 3, 0.5],       // 오른쪽 바깥
+  [-0.72, -0.86, 0.34, 1.3, -2, 0.5],      // 왼쪽 맨 아래
+  [0.74, -0.8, 0.3, 1.0, 3, 0.5],          // 오른쪽 맨 아래
 ];
 
-/** 사진이 없을 때 대신 보여줄 임시 카드 */
+const SLOTS = {
+  // 세로(모바일): 화면 폭에 맞춘 별도 배치
+  tall: [
+    [0, 2.27, 0.6, null, 0, 0.5],
+    [-0.36, 2.52, 0.24, 1.0, -3, 0.35],
+    [0.34, 2.62, 0.26, 0.75, 3, 0.4],
+    [-0.4, 2.2, 0.34, 0.75, -2, 0.5],
+    [0.4, 2.24, 0.3, 1.0, 3, 0.45],
+    [-0.67, 2.4, 0.26, 0.75, 4, 0.4],
+    [0.67, 2.55, 0.24, 1.0, -3, 0.4],
+    [-0.62, 1.86, 0.26, 1.3, 2, 0.5],
+    [0.62, 1.93, 0.3, 0.75, -2, 0.5],
+    [-0.68, 1.47, 0.22, 1.0, -3, 0.5],
+    [0.68, 1.45, 0.24, 0.75, 3, 0.5],
+  ],
+  // 가로(데스크톱): UNIT × 0.62, 중심 (0, 2.17)
+  wide: UNIT.map(([x, y, h, a, r, f]) => [x * 0.62, 2.17 + y * 0.62, h * 0.62, a, r, f]),
+};
+export const MAX_ON_WALL = UNIT.length;
+
+/* ───────── 임시 카드 (사진 파일이 없을 때) ───────── */
+const PASTELS = [
+  ['#eef3df', '#dbe6bd'], ['#e8f0e2', '#cfe2c6'], ['#f4f1e4', '#e4e9cf'], ['#e3ece6', '#cbdccf'],
+];
 export function placeholderCanvas(i, caption, portrait) {
   const w = portrait ? 480 : 640, h = portrait ? 640 : 480;
   const c = document.createElement('canvas');
@@ -33,55 +57,37 @@ export function placeholderCanvas(i, caption, portrait) {
   const grd = g.createLinearGradient(0, 0, w, h);
   grd.addColorStop(0, a); grd.addColorStop(1, b);
   g.fillStyle = grd; g.fillRect(0, 0, w, h);
-  // 보케
-  for (let k = 0; k < 14; k++) {
-    g.fillStyle = `rgba(255,255,255,${0.1 + ((k * 37) % 20) / 100})`;
-    g.beginPath(); g.arc(((k * 97) % w), ((k * 61) % h), 20 + ((k * 13) % 50), 0, Math.PI * 2); g.fill();
-  }
   g.fillStyle = 'rgba(255,255,255,.75)';
   g.font = `${Math.round(w * 0.2)}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText('♡', w / 2, h * 0.42);
-  g.fillStyle = 'rgba(90,78,64,.7)';
-  g.font = `${Math.round(w * 0.05)}px "Gowun Dodum", sans-serif`;
-  g.fillText(`PHOTO ${String(i + 1).padStart(2, '0')}`, w / 2, h * 0.62);
-  g.font = `${Math.round(w * 0.04)}px "Gowun Dodum", sans-serif`;
-  g.fillStyle = 'rgba(90,78,64,.5)';
-  g.fillText('assets/photos 에 사진을 넣어주세요', w / 2, h * 0.7);
+  g.fillText('♡', w / 2, h * 0.45);
+  g.fillStyle = 'rgba(90,100,70,.55)';
+  g.font = `${Math.round(w * 0.045)}px "Gowun Dodum", sans-serif`;
+  g.fillText(`PHOTO ${String(i + 1).padStart(2, '0')}`, w / 2, h * 0.64);
   return c;
 }
 
-/* 마스킹테이프 텍스처 (끝이 찢어진 느낌) */
-let tapeTex;
-function getTapeTexture() {
-  if (tapeTex) return tapeTex;
-  tapeTex = canvasTexture(256, 72, (g, w, h) => {
-    g.clearRect(0, 0, w, h);
-    g.fillStyle = '#ecdcae';
-    g.beginPath();
-    const z = (x0, dir) => { // 지그재그 끝
-      for (let y = 0; y <= h; y += 9) g.lineTo(x0 + dir * (y % 18 === 0 ? 0 : 7), y);
-    };
-    g.moveTo(6, 0); g.lineTo(w - 6, 0);
-    for (let y = 0; y <= h; y += 9) g.lineTo(w - (y % 18 === 0 ? 0 : 7), y);
-    g.lineTo(w - 6, h); g.lineTo(6, h);
-    for (let y = h; y >= 0; y -= 9) g.lineTo(y % 18 === 0 ? 0 : 7, y);
-    g.closePath(); g.fill();
-    // 종이 결 + 반투명 줄무늬
-    g.globalCompositeOperation = 'source-atop';
-    for (let i = 0; i < 400; i++) {
-      g.fillStyle = `rgba(${Math.random() > 0.5 ? '255,250,230' : '180,150,90'},${Math.random() * 0.18})`;
-      g.fillRect(Math.random() * w, Math.random() * h, 1 + Math.random() * 14, 1);
-    }
-    const lg = g.createLinearGradient(0, 0, 0, h);
-    lg.addColorStop(0, 'rgba(255,255,255,.28)'); lg.addColorStop(0.5, 'rgba(255,255,255,0)'); lg.addColorStop(1, 'rgba(120,95,50,.12)');
-    g.fillStyle = lg; g.fillRect(0, 0, w, h);
-  });
-  return tapeTex;
+/* ───────── 마스킹테이프 (연두 테마, 실제 테이프 이미지) ───────── */
+const TAPE_COUNT = 15;
+const loader = new THREE.TextureLoader();
+const tapeMats = [];
+function tapeMat(i) {
+  const k = i % TAPE_COUNT;
+  if (!tapeMats[k]) {
+    const tex = loader.load(`assets/tapes/tape${String(k + 1).padStart(2, '0')}.png`, (t) => {
+      tapeMats[k].userData.aspect = t.image.width / t.image.height;
+      tapeMats[k].userData.waiting.forEach((fn) => fn());
+    });
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    const m = new THREE.MeshStandardMaterial({
+      map: tex, transparent: true, alphaTest: 0.03, opacity: 0.95, roughness: 0.75, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
+    });
+    m.userData = { aspect: 3.2, waiting: [] };
+    tapeMats[k] = m;
+  }
+  return tapeMats[k];
 }
-const tapeMat = () => new THREE.MeshStandardMaterial({
-  map: getTapeTexture(), transparent: true, opacity: 0.86, roughness: 0.6, depthWrite: false,
-  polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
-});
 
 /** 살짝 휘어진 종이 */
 function paperGeo(bx, by, twist) {
@@ -95,37 +101,40 @@ function paperGeo(bx, by, twist) {
   return g;
 }
 
-export function buildWall(photos, onTextureReady) {
+export function buildWall(gallery, onTextureReady) {
   const group = new THREE.Group();
-  const loader = new THREE.TextureLoader();
   const items = [];
   const hits = [];
 
-  const count = Math.min(photos.length, MAX_ON_WALL);
+  const count = Math.min(gallery.length, MAX_ON_WALL);
   for (let i = 0; i < count; i++) {
     const rnd = (k) => { const s = Math.sin((i + 1) * 91.7 + k * 17.3) * 43758.5453; return s - Math.floor(s); };
+    const isPoster = i === 0;
     const g = new THREE.Group();
-    const geo = paperGeo((rnd(1) - 0.5) * 0.018, (rnd(2) - 0.5) * 0.014, (rnd(3) - 0.5) * 0.012);
+    const geo = paperGeo((rnd(1) - 0.5) * 0.012, (rnd(2) - 0.5) * 0.01, (rnd(3) - 0.5) * 0.008);
 
     const paper = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#fffdf8', roughness: 0.9, side: THREE.DoubleSide }));
-    const imgMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.55, metalness: 0 });
+    const imgMat = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.6, metalness: 0 });
     const img = new THREE.Mesh(geo, imgMat);
     img.position.z = 0.0012;
-    const blob = wallBlob(1, 1, 0.34);
+    const blob = wallBlob(1, 1, 0.3);
     blob.position.z = -0.004;
     g.add(blob, paper, img);
 
-    // 테이프: 1~2개, 위쪽 모서리/가운데 랜덤
-    const style = Math.floor(rnd(4) * 3); // 0: 양 모서리, 1: 가운데 하나, 2: 한쪽 모서리 두 장
+    // 테이프: 사진마다 붙이는 방식이 조금씩 다름
     const tapes = [];
-    const addTape = (nx, ny, rot) => {
-      const t = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.28), tapeMat());
-      t.userData = { nx, ny, rot, len: 0.38 + rnd(7 + tapes.length) * 0.12 };
+    const addTape = (nx, ny, rot, len) => {
+      const t = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), tapeMat(Math.floor(rnd(9 + tapes.length) * TAPE_COUNT)));
+      t.userData = { nx, ny, rot, len };
+      t.renderOrder = 2;
       tapes.push(t); g.add(t);
     };
-    if (style === 0) { addTape(-0.5, 0.5, -0.62 - rnd(5) * 0.2); addTape(0.5, 0.5, 0.62 + rnd(6) * 0.2); }
-    else if (style === 1) { addTape(0.02 * (rnd(5) - 0.5), 0.5, (rnd(6) - 0.5) * 0.3); }
-    else { addTape(-0.5, 0.5, -0.6); addTape(0.5, -0.5, -0.65); }
+    const style = isPoster ? 1 : Math.floor(rnd(4) * 4);
+    const jr = (k, a) => (rnd(k) - 0.5) * a;
+    if (style === 0) addTape(jr(5, 0.2), 0.5, jr(6, 0.12), 0.62);                                    // 위 가운데 가로
+    else if (style === 1) { addTape(-0.5, 0.5, 0.62 + jr(5, 0.2), 0.46); addTape(0.5, 0.5, -0.62 + jr(6, 0.2), 0.46); } // 위 양쪽 모서리
+    else if (style === 2) { addTape(-0.5, 0.5, 0.7 + jr(5, 0.2), 0.48); addTape(0.5, -0.5, 0.7 + jr(6, 0.2), 0.48); }  // 대각선 두 모서리
+    else addTape(0.5, 0.5, -0.66 + jr(5, 0.2), 0.52);                                                // 오른쪽 위 하나
 
     paper.userData.photoIndex = i;
     img.userData.photoIndex = i;
@@ -133,37 +142,54 @@ export function buildWall(photos, onTextureReady) {
     group.add(g);
 
     const item = {
-      index: i, group: g, paper, img, blob, tapes, hot: 0, aspect: i % 2 ? 4 / 3 : 3 / 4,
-      size: 0.3, ok: false, url: photos[i].src,
-      placeholder: null, base: new THREE.Vector3(), rot: 0, z: WALL_Z + 0.006 + i * 0.0009,
+      index: i, group: g, paper, img, blob, tapes, hot: 0, isPoster,
+      imgAspect: 0.75, aspect: 0.75, focus: 0.5, h: 0.3, tex: null,
+      ok: false, url: gallery[i].src,
+      base: new THREE.Vector3(), rot: 0, z: WALL_Z + (isPoster ? 0.004 : 0.006 + i * 0.0009),
     };
     items.push(item);
 
     // 임시 카드 먼저, 실제 사진이 있으면 교체
-    item.placeholder = placeholderCanvas(i, photos[i].caption, item.aspect < 1);
-    const ph = new THREE.CanvasTexture(item.placeholder); ph.colorSpace = THREE.SRGBColorSpace;
-    imgMat.map = ph;
-    loader.load(photos[i].src, (tex) => {
+    const ph = new THREE.CanvasTexture(placeholderCanvas(i, '', true));
+    ph.colorSpace = THREE.SRGBColorSpace;
+    item.tex = ph; imgMat.map = ph;
+    loader.load(gallery[i].src, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-      imgMat.map = tex; imgMat.needsUpdate = true;
-      item.ok = true; item.aspect = tex.image.width / tex.image.height;
+      item.tex = tex; imgMat.map = tex; imgMat.needsUpdate = true;
+      item.ok = true; item.imgAspect = tex.image.width / tex.image.height;
       fit(item); onTextureReady?.(item);
     }, undefined, () => { /* 파일 없음 → 임시 카드 유지 */ });
+
+    tapes.forEach((t) => t.material.userData.waiting.push(() => fit(item)));
   }
 
+  /** 슬롯 비율에 맞춰 사진을 잘라(텍스처 크롭) 붙이기 */
   function fit(item) {
-    const a = item.aspect;
-    const w = item.size * Math.min(1, a), h = item.size * Math.min(1, 1 / a);
-    const b = 0.014, bb = 0.034;
+    const a = item.slotAspect ?? item.imgAspect;
+    item.aspect = a;
+    const h = item.h, w = h * a;
+    const tex = item.tex;
+    if (tex) {
+      const ia = item.imgAspect;
+      if (a > ia) { // 슬롯이 더 넓음 → 위아래를 자름
+        const ry = ia / a;
+        tex.repeat.set(1, ry); tex.offset.set(0, (1 - ry) * (1 - item.focus));
+      } else {
+        const rx = a / ia;
+        tex.repeat.set(rx, 1); tex.offset.set((1 - rx) / 2, 0);
+      }
+    }
+    const b = item.isPoster ? 0.0 : 0.006;
     item.img.scale.set(w, h, 1);
-    item.paper.scale.set(w + b * 2, h + b + bb, 1);
-    item.paper.position.y = -(bb - b) / 2;
-    item.blob.scale.set((w + 0.1) * 1.25, (h + 0.1) * 1.25, 1);
-    item.blob.position.x = 0.01; item.blob.position.y = -0.02;
+    item.paper.scale.set(w + b * 2, h + b * 2, 1);
+    item.paper.visible = !item.isPoster;
+    item.blob.scale.set((w + 0.06) * 1.2, (h + 0.06) * 1.2, 1);
+    item.blob.position.set(0.008, -0.014, -0.004);
     item.tapes.forEach((t) => {
       const { nx, ny, rot, len } = t.userData;
-      t.scale.set(item.size * (0.34 + len * 0.3), item.size * 0.19, 1);
-      t.position.set(nx * (w + b * 2) * 0.96, ny * (h + b * 2) * 0.97 - (ny < 0 ? bb - b : 0), 0.003);
+      const tw = Math.min(0.19, Math.max(0.09, (w * len + 0.03) * 1.15));
+      t.scale.set(tw, tw / Math.min(2.7, t.material.userData.aspect), 1); // 폭 넓은 테이프
+      t.position.set(nx * w * 0.86, ny * h * 0.95, 0.003);
       t.rotation.z = rot;
     });
   }
@@ -175,8 +201,9 @@ export function buildWall(photos, onTextureReady) {
     items.forEach((it, i) => {
       it.group.visible = i < slots.length;
       if (i >= slots.length) return;
-      const [x, y, size, rot] = slots[i];
-      it.size = size; it.base.set(x, y, it.z); it.rot = THREE.MathUtils.degToRad(rot);
+      const [x, y, h, a, rot, focus] = slots[i];
+      it.h = h; it.slotAspect = a; it.focus = focus;
+      it.base.set(x, y, it.z); it.rot = THREE.MathUtils.degToRad(rot);
       it.group.position.copy(it.base);
       it.group.rotation.z = it.rot;
       fit(it);
@@ -187,10 +214,9 @@ export function buildWall(photos, onTextureReady) {
     items.forEach((it) => {
       const target = it.index === hoverIndex ? 1 : 0;
       it.hot += (target - it.hot) * Math.min(1, dt * 10);
-      const s = 1 + it.hot * 0.05;
-      it.group.scale.setScalar(s);
+      it.group.scale.setScalar(1 + it.hot * 0.05);
       it.group.position.z = it.base.z + it.hot * 0.02;
-      it.blob.material.opacity = 0.34 - it.hot * 0.08;
+      it.blob.material.opacity = 0.3 - it.hot * 0.08;
     });
   }
 

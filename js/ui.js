@@ -28,6 +28,48 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
     setTimeout(() => el.remove(), 1400);
   }
 
+  /* ───── 콘페티 ───── */
+  const cv = document.createElement('canvas');
+  cv.id = 'confetti';
+  document.body.appendChild(cv);
+  const cx2 = cv.getContext('2d');
+  let bits = [], confettiOn = false;
+  function confetti(x, y, { count = 140, colors = ['#ffffff', '#fffdf6', '#f6f4ec', '#ffffff'] } = {}) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+    cx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (let i = 0; i < count; i++) {
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 1.9;
+      const v = 6 + Math.random() * 9;
+      bits.push({
+        x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, w: 6 + Math.random() * 7, h: 4 + Math.random() * 6,
+        r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, flip: Math.random() * 6, vf: 0.1 + Math.random() * 0.2,
+        c: colors[i % colors.length], round: Math.random() < 0.3, life: 0,
+      });
+    }
+    if (!confettiOn) { confettiOn = true; requestAnimationFrame(tickConfetti); }
+  }
+  function tickConfetti() {
+    cx2.clearRect(0, 0, innerWidth, innerHeight);
+    bits = bits.filter((b) => b.y < innerHeight + 30 && b.life < 320);
+    bits.forEach((b) => {
+      b.life++; b.vy += 0.22; b.vx *= 0.985; b.vy *= 0.985;
+      b.x += b.vx + Math.sin(b.life * 0.07 + b.r) * 0.6; b.y += b.vy; b.r += b.vr; b.flip += b.vf;
+      cx2.save(); cx2.translate(b.x, b.y); cx2.rotate(b.r); cx2.scale(1, Math.cos(b.flip));
+      cx2.fillStyle = b.c; cx2.shadowColor = 'rgba(70,60,40,.28)'; cx2.shadowBlur = 3; cx2.shadowOffsetY = 1;
+      if (b.round) { cx2.beginPath(); cx2.arc(0, 0, b.w / 2.6, 0, Math.PI * 2); cx2.fill(); }
+      else cx2.fillRect(-b.w / 2, -b.h / 2, b.w, b.h);
+      cx2.restore();
+    });
+    if (bits.length) requestAnimationFrame(tickConfetti);
+    else { confettiOn = false; cx2.clearRect(0, 0, innerWidth, innerHeight); }
+  }
+  function rain(text, n = 18) {
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => pop(Math.random() * innerWidth, innerHeight * (0.35 + Math.random() * 0.5), text), i * 70);
+    }
+  }
+
   /* ───── 읽은 편지 ───── */
   const readSet = new Set(store.get('bouquet.read.v1', []));
   function updateProgress() {
@@ -38,15 +80,30 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   updateProgress();
 
   /* ───── 편지 시트 ───── */
+  // 손글씨 폰트 4종을 편지마다 랜덤으로 (한 번 열면 같은 편지는 같은 글씨체 유지)
+  const HANDS = [
+    { family: 'NanumSonPyeonJi', size: '27px' },
+    { family: 'NanumGyuriDiary', size: '27px' },
+    { family: 'NanumParkKyungA', size: '26px' },
+    { family: 'NanumAgiSarang', size: '27px' },
+  ];
+  const letterHand = letters.map(() => HANDS[Math.floor(Math.random() * HANDS.length)]);
+  // 첫 화면이 뜬 뒤 폰트를 미리 받아둠
+  setTimeout(() => HANDS.forEach((h) => document.fonts?.load(`20px "${h.family}"`).catch(() => {})), 2500);
   let cur = -1;
   const sheet = $('letter');
   const paper = $('paper');
   function renderLetter(i, animate) {
     const l = letters[i];
-    const f = flowerInfo(i);
-    $('letter-chip').textContent = `${f.icon} ${f.ko}`;
+    const hand = letterHand[i];
+    paper.style.setProperty('--letter-font', `"${hand.family}", var(--hand)`);
+    paper.style.setProperty('--letter-size', hand.size);
+    const chip = $('letter-chip');
+    chip.textContent = 'From.';
+    const name = document.createElement('b');
+    name.textContent = l.from;
+    chip.appendChild(name);
     $('letter-body').textContent = l.text;
-    $('letter-from').textContent = `— ${l.from}`;
     $('letter-count').textContent = `${i + 1} / ${letters.length}`;
     paper.scrollTop = 0;
     if (animate) { paper.classList.remove('swap'); void paper.offsetWidth; paper.classList.add('swap'); }
@@ -89,20 +146,19 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   }
 
   /* ───── 사진 라이트박스 ───── */
-  const lb = $('lightbox'), card = $('lb-card'), lbImg = $('lb-img'), lbCap = $('lb-cap'), dots = $('lb-dots');
+  const lb = $('lightbox'), card = $('lb-card'), lbImg = $('lb-img'), dots = $('lb-dots');
   let pi = -1, busy = false;
   dots.innerHTML = photos.map(() => '<i></i>').join('');
   function setPhoto(i) {
     pi = (i + photos.length) % photos.length;
     const p = photos[pi];
     const idx = pi;
-    lbImg.alt = p.caption || '';
-    lbCap.textContent = p.caption || '';
+    lbImg.alt = `사진 ${idx + 1}`;
     [...dots.children].forEach((d, k) => d.classList.toggle('on', k === idx));
     return new Promise((res) => {
       lbImg.onload = () => res();
       // 파일이 없으면 임시 카드로 대체 (대체 이미지가 로드되면 onload 가 이어서 호출됨)
-      lbImg.onerror = () => { lbImg.onerror = null; lbImg.src = placeholderCanvas(idx, p.caption, idx % 2 === 0).toDataURL(); };
+      lbImg.onerror = () => { lbImg.onerror = null; lbImg.src = placeholderCanvas(idx, '', true).toDataURL(); };
       const abs = new URL(p.src, location.href).href;
       if (lbImg.complete && lbImg.naturalWidth && lbImg.currentSrc === abs) res();
       else lbImg.src = p.src;
@@ -214,7 +270,7 @@ export function createUI({ site, letters, photos, music, flowerInfo, hooks }) {
   armAudio();
 
   return {
-    toast, pop, openLetter, closeLetter, openPhoto, closePhoto,
+    toast, pop, confetti, rain, openLetter, closeLetter, openPhoto, closePhoto,
     isRead: (i) => readSet.has(i),
     get readCount() { return readSet.size; },
     get letterOpen() { return cur >= 0; },
