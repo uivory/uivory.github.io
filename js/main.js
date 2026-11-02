@@ -68,8 +68,8 @@ const wall = buildWall(photos);
 scene.add(wall.group);
 
 /* ───────── bouquet (비동기) ───────── */
-const BQ_Y = TABLE_TOP_Y + 0.64;
-const BASE_PITCH = 0.42;
+const BQ_Y = TABLE_TOP_Y + 0.68;
+const BASE_PITCH = 0.18;
 const holder = new THREE.Group(); // 위치 + 기울기(피치)
 const spin = new THREE.Group();   // 자체 회전(요)
 holder.position.set(0, BQ_Y, 0.02);
@@ -116,7 +116,7 @@ const dust = (() => {
 
 /* ───────── view / camera rig ───────── */
 const view = {
-  yaw: 0.5, yawT: 0.5, pitch: BASE_PITCH, pitchT: BASE_PITCH, yawV: 0,
+  yaw: 0.15, yawT: 0.15, pitch: BASE_PITCH, pitchT: BASE_PITCH, yawV: 0,
   zoom: 0, zoomT: 0, pan: new THREE.Vector2(), panT: new THREE.Vector2(),
   focus: null,           // 편지를 열었을 때 꽃 위치
   shift: new THREE.Vector2(), shiftT: new THREE.Vector2(),
@@ -252,7 +252,7 @@ function resetView() {
   ui.closeLetter();
   view.zoomT = 0; view.panT.set(0, 0);
   const turns = Math.round(view.yaw / (Math.PI * 2));
-  view.yawT = turns * Math.PI * 2 + 0.5; view.yawV = 0;
+  view.yawT = turns * Math.PI * 2 + 0.15; view.yawV = 0;
   view.pitchT = BASE_PITCH;
 }
 $('btn-reset').onclick = (e) => { e.stopPropagation(); resetView(); };
@@ -440,7 +440,7 @@ function frame() {
       const breathe = unread ? Math.sin(t * 2 + f.phase) * 0.018 : 0;
       f.mesh.scale.setScalar(1 + f.hot * 0.13 + breathe);
       f.mesh.material.emissive.setRGB(1, 0.86, 0.88);
-      f.mesh.material.emissiveIntensity = f.hot * 0.28;
+      f.mesh.material.emissiveIntensity = 0.06 + f.hot * 0.26;
 
       if (f.sprite) {
         f.mesh.getWorldPosition(sparkleV);
@@ -450,7 +450,7 @@ function frame() {
         const vis = unread ? smooth(-0.1, 0.4, facing) : 0;
         const pulse = 0.65 + 0.35 * Math.sin(t * 2.6 + f.phase * 2);
         f.sprite.material.opacity = vis * pulse * (1 - view.zoom * 0.5);
-        const s = f.radius * (1.0 + 0.3 * pulse);
+        const s = Math.min(f.radius, 0.07) * (0.75 + 0.25 * pulse);
         f.sprite.scale.set(s, s, 1);
       }
     });
@@ -476,7 +476,7 @@ function frame() {
 /* ───────── boot ───────── */
 (async function boot() {
   try {
-    bq = await loadBouquet('assets/models/bouquet.glb');
+    bq = await loadBouquet();
     spin.add(bq.group);
     letters = allLetters.slice(0, bq.flowers.length);
     $('read-total').textContent = letters.length;
