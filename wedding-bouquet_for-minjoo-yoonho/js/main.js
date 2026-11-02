@@ -1,12 +1,12 @@
 import * as THREE from '../vendor/three/three.module.min.js?v=r170';
 import { RoomEnvironment } from '../vendor/three/addons/environments/RoomEnvironment.js?v=r170';
-import { site, photos, poster, music } from '../data/content.js?v=20261102c';
-import { letters, refreshLetters } from './letters.js?v=20261102c';
-import { buildRoom, TABLE_TOP_Y, WALL_Z, blobShadow, canvasTexture } from './room.js?v=20261102c';
-import { loadBouquet } from './bouquet.js?v=20261102c';
-import { createDogs } from './dogs.js?v=20261102c';
-import { buildWall } from './wall.js?v=20261102c';
-import { createUI } from './ui.js?v=20261102c';
+import { site, photos, poster, music } from '../data/content.js?v=20261102e';
+import { letters, refreshLetters } from './letters.js?v=20261102e';
+import { buildRoom, TABLE_TOP_Y, WALL_Z, blobShadow, canvasTexture } from './room.js?v=20261102e';
+import { loadBouquet } from './bouquet.js?v=20261102e';
+import { createDogs } from './dogs.js?v=20261102e';
+import { buildWall } from './wall.js?v=20261102e';
+import { createUI } from './ui.js?v=20261102e';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
@@ -214,7 +214,8 @@ function flowerWorldAt(f, yaw) {
 }
 
 function focusFlower(i) {
-  const f = bq.flowers[i];
+  const f = bq.flowers[i % bq.flowers.length]; // 18번째 편지부터는 꽃을 돌아가며
+  i = f.index;
   selected = i;
   // 선택한 꽃이 정면을 향하도록 부케를 돌림
   const r = Math.hypot(f.center.x, f.center.z);
@@ -460,7 +461,7 @@ ui = createUI({
     thumbs: () => flowerThumbs(),
     flowerLabel: (i) => bq?.flowers[i]?.label,
     onLetterClose: () => unfocus(),
-    onRead: (i) => { if (bq) bq.flowers[i].read = true; },
+    onRead: (i) => { const f = bq?.flowers[i]; if (f) f.read = true; },
     onViewing: () => {},
   },
 });

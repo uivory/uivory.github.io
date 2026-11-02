@@ -15,12 +15,13 @@ export const music = {
 };
 
 // ─── 편지 ─────────────────────────────────────────────────────
-// 부케 속 꽃 17송이 = 편지 17칸.
+// 부케 속 꽃 17송이 = 처음 편지 17칸. 17통이 다 차면 칸이 하나씩 늘어나 최대 50통까지 쓸 수 있어요.
 //   거베라 4 → 장미 4 → 튤립 4 → 리시안셔스 3 → 작은 흰 꽃 2
 // 편지는 Supabase(bouquet_letters 테이블)에 저장돼서, 링크를 받은 친구들이
 // 빈 꽃을 눌러 직접 쓰고, 정한 비밀번호 4자리로 수정할 수 있어요.
 // 아래 letters 는 미리 모아둔 편지(수정 불가)이자, 서버에 닿지 않을 때 보여줄 내용이에요.
-export const LETTER_SLOTS = 17;
+export const LETTER_SLOTS = 17;   // 처음 보여줄 칸 수 (꽃 17송이). 다 차면 18, 19… 로 늘어나요
+export const LETTER_MAX = 50;     // 최대 편지 수
 
 export const letterApi = {
   url: 'https://yvxankwsmeufifxwwsiy.supabase.co',

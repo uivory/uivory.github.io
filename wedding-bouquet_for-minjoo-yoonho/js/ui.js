@@ -1,5 +1,5 @@
-import { placeholderCanvas } from './wall.js?v=20261102c';
-import { letters, writeLetter, refreshLetters, onLettersChange } from './letters.js?v=20261102c';
+import { placeholderCanvas } from './wall.js?v=20261102e';
+import { letters, writeLetter, addLetter, ensureEmptySlot, refreshLetters, onLettersChange, LETTER_MAX } from './letters.js?v=20261102e';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -85,7 +85,10 @@ export function createUI({ site, photos, music, hooks }) {
     { family: 'NanumParkKyungA', size: '26px' },
     { family: 'NanumAgiSarang', size: '27px' },
   ];
-  const letterHand = letters.map(() => HANDS[Math.floor(Math.random() * HANDS.length)]);
+  // 편지마다 글씨체를 랜덤으로 정하고, 같은 편지는 계속 같은 글씨체 (편지 수가 늘어나도 OK)
+  const hands = [];
+  const handOf = (i) => hands[i] || (hands[i] = HANDS[Math.floor(Math.random() * HANDS.length)]);
+  const letterHand = new Proxy([], { get: (_, k) => (k === 'length' ? letters.length : handOf(Number(k))) });
   // 첫 화면이 뜬 뒤 폰트를 미리 받아둠
   // 손글씨 폰트는 편지를 열 때 그 편지의 폰트만 받아요. 1번 편지 폰트만 첫 화면이 뜬 뒤 미리 받아둠
   const loadHand = (h) => document.fonts?.load(`20px "${h.family}"`).catch(() => {});
@@ -174,11 +177,14 @@ export function createUI({ site, photos, music, hooks }) {
     fErr.textContent = '';
     fSave.disabled = true; fSave.textContent = '저장 중…';
     try {
-      const result = await writeLetter(slot, from, text, pin, newPin);
-      store.set(pinKey(slot), newPin || pin || '0000');
+      let result, saved = slot;
+      if (isNew) { saved = await addLetter(slot, from, text, pin); result = 'created'; }
+      else result = await writeLetter(slot, from, text, pin, newPin);
+      store.set(pinKey(saved), newPin || pin || '0000');
       if (cur !== slot) return;
       closeEditor();
-      renderLetter(slot, true);
+      cur = saved;
+      renderLetter(saved, true);
       toast(result === 'created' ? '편지가 꽃에 담겼어요 💌' : '편지를 고쳤어요 ✏️');
       const r = paper.getBoundingClientRect();
       confetti(r.left + r.width / 2, r.top + 10, { count: 70 });
@@ -195,12 +201,13 @@ export function createUI({ site, photos, music, hooks }) {
   const cta = $('cta');
   const firstEmpty = () => letters.findIndex((l) => l.empty);
   function updateCta() {
-    const full = firstEmpty() < 0;
+    // 빈 칸이 없어도 칸을 늘려 계속 쓸 수 있으니, 최대(50통)까지 다 찼을 때만 "편지 읽기"
+    const full = firstEmpty() < 0 && letters.length >= LETTER_MAX;
     cta.textContent = full ? '📖 편지 읽기' : '✍️ 편지 남기기';
     cta.classList.toggle('read', full);
   }
   cta.onclick = () => {
-    const i = firstEmpty();
+    const i = ensureEmptySlot();
     if (i < 0) { openLetter(0); return; }
     openLetter(i);
     openEditor();
@@ -210,14 +217,16 @@ export function createUI({ site, photos, music, hooks }) {
   /* ───── 편지함 목록 (3 × 6) ───── */
   const picker = $('picker'), grid = $('pk-grid');
   let pickerOpen = false;
+  // 18번째부터는 부케 꽃 중 하나를 골라 썸네일로 (같은 칸은 항상 같은 꽃)
+  const thumbIndex = (i, n) => (n && i >= n ? (i * 7 + 3) % n : i);
   function renderPicker() {
     const th = hooks.thumbs?.() || [];
+    ensureEmptySlot(); // 다 찼으면 다음 번호 빈 칸을 하나 붙여서 + 로 이어 쓸 수 있게
     const filled = letters.filter((l) => !l.empty).length;
-    $('pk-count').textContent = `${filled} / ${letters.length} 통`;
+    $('pk-count').textContent = `${filled}통`;
     grid.innerHTML = '';
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < letters.length; i++) {
       const cell = document.createElement('div');
-      if (i >= letters.length) { cell.className = 'pk-cell pk-blank'; grid.appendChild(cell); continue; }
       const l = letters[i];
       cell.className = 'pk-cell' + (l.empty ? ' empty' : '') + (i === cur ? ' current' : '');
       const frame = document.createElement(l.empty ? 'div' : 'button');
@@ -225,8 +234,9 @@ export function createUI({ site, photos, music, hooks }) {
       if (!l.empty) { frame.type = 'button'; frame.setAttribute('aria-label', `${l.from}의 편지 열기`); frame.onclick = () => { closePicker(); openLetter(i); }; }
       const no = document.createElement('span'); no.className = 'pk-no'; no.textContent = i + 1;
       frame.appendChild(no);
-      if (th[i]) { const img = new Image(); img.src = th[i]; img.alt = ''; img.className = 'pk-img'; frame.appendChild(img); }
-      else { const ph = document.createElement('span'); ph.className = 'pk-ph'; ph.textContent = hooks.flowerLabel?.(i)?.icon || '🌸'; frame.appendChild(ph); }
+      const ti = thumbIndex(i, th.length);
+      if (th[ti]) { const img = new Image(); img.src = th[ti]; img.alt = ''; img.className = 'pk-img'; frame.appendChild(img); }
+      else { const ph = document.createElement('span'); ph.className = 'pk-ph'; ph.textContent = hooks.flowerLabel?.(thumbIndex(i, 17))?.icon || '🌸'; frame.appendChild(ph); }
       if (l.empty) {
         const plus = document.createElement('button');
         plus.type = 'button'; plus.className = 'pk-plus'; plus.setAttribute('aria-label', `${i + 1}번 빈 편지함에 편지 쓰기`);
@@ -246,6 +256,8 @@ export function createUI({ site, photos, music, hooks }) {
     pickerOpen = true;
     renderPicker();
     picker.classList.add('open'); picker.setAttribute('aria-hidden', 'false');
+    // 편지가 많아졌을 때 지금 보던 편지가 보이도록 스크롤
+    grid.querySelector('.pk-cell.current')?.scrollIntoView({ block: 'center' });
     refreshLetters();
   }
   function closePicker() {
