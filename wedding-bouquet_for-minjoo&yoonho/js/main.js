@@ -568,6 +568,9 @@ function frame() {
     spin.add(bqHit);
   }
   refreshLetters(true);
+  // 셰이더를 미리(가능하면 병렬로) 준비해서 첫 화면 멈춤을 줄임
+  updateCamera(0);
+  try { await renderer.compileAsync(scene, camera); } catch { /* 지원 안 하면 첫 프레임에서 준비 */ }
   renderer.setAnimationLoop(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => $('loader').classList.add('done')));
 

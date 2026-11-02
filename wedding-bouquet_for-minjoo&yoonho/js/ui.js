@@ -87,7 +87,9 @@ export function createUI({ site, photos, music, hooks }) {
   ];
   const letterHand = letters.map(() => HANDS[Math.floor(Math.random() * HANDS.length)]);
   // 첫 화면이 뜬 뒤 폰트를 미리 받아둠
-  setTimeout(() => HANDS.forEach((h) => document.fonts?.load(`20px "${h.family}"`).catch(() => {})), 2500);
+  // 손글씨 폰트는 편지를 열 때 그 편지의 폰트만 받아요. 1번 편지 폰트만 첫 화면이 뜬 뒤 미리 받아둠
+  const loadHand = (h) => document.fonts?.load(`20px "${h.family}"`).catch(() => {});
+  setTimeout(() => loadHand(letterHand[0]), 6000);
   let cur = -1;
   const sheet = $('letter');
   const paper = $('paper');
@@ -99,6 +101,7 @@ export function createUI({ site, photos, music, hooks }) {
   function renderLetter(i, animate) {
     const l = letters[i];
     const hand = letterHand[i];
+    loadHand(hand); loadHand(letterHand[(i + 1) % letterHand.length]);
     paper.style.setProperty('--letter-font', `"${hand.family}", var(--hand)`);
     paper.style.setProperty('--letter-size', hand.size);
     const chip = $('letter-chip');
@@ -351,8 +354,10 @@ export function createUI({ site, photos, music, hooks }) {
       else lbImg.src = p.src;
     });
   }
+  const prefetch = (k) => { const im = new Image(); im.src = photos[(k + photos.length) % photos.length].src; };
   async function openPhoto(i, from) {
     await setPhoto(i);
+    prefetch(i + 1); prefetch(i - 1);
     lb.classList.add('open'); lb.setAttribute('aria-hidden', 'false');
     document.body.classList.add('viewing');
     hooks.onViewing?.(true);

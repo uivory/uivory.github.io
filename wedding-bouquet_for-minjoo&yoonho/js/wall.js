@@ -153,7 +153,9 @@ export function buildWall(gallery, onTextureReady) {
     const ph = new THREE.CanvasTexture(placeholderCanvas(i, '', true));
     ph.colorSpace = THREE.SRGBColorSpace;
     item.tex = ph; imgMat.map = ph;
-    loader.load(gallery[i].src, (tex) => {
+    // 벽에는 작은 사진(sm/)을 쓰고, 크게 볼 때(라이트박스)만 원본을 불러옴
+    const small = gallery[i].src.replace(/([^/]+)$/, 'sm/$1');
+    loader.load(small, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
       item.tex = tex; imgMat.map = tex; imgMat.needsUpdate = true;
       item.ok = true; item.imgAspect = tex.image.width / tex.image.height;
