@@ -24,7 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   <link rel="modulepreload" href="vendor/three/three.module.min.js?v=r170">
-  <link rel="stylesheet" href="css/style.css?v=20261102f">
+  <link rel="stylesheet" href="css/style.css?v=20261102g">
 </head>
 <body>
   <canvas id="stage" aria-label="3D 부케 편지함"></canvas>
@@ -57,7 +57,10 @@
     <div id="hint" class="pill">
       <span class="hint-ic">✋</span><span id="hint-text">드래그해서 돌려보고, 두 손가락으로 확대해요</span>
     </div>
-    <button id="cta" class="cta" type="button">✍️ 편지 남기기</button>
+    <div class="cta-row">
+      <button id="cta" class="cta" type="button">✍️ 편지 남기기</button>
+      <button id="cta-write" class="cta-write" type="button" aria-label="편지 남기기" title="편지 남기기" hidden>✍️</button>
+    </div>
   </footer>
 
   <div id="toast" role="status"></div>
@@ -176,6 +179,6 @@
   <audio id="bgm" loop preload="metadata" playsinline></audio>
 
   <noscript><p style="position:fixed;inset:0;display:grid;place-items:center">이 페이지는 JavaScript가 필요해요.</p></noscript>
-  <script type="module" src="js/main.js?v=20261102f"></script>
+  <script type="module" src="js/main.js?v=20261102g"></script>
 </body>
 </html>

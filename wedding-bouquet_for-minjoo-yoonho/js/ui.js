@@ -1,5 +1,5 @@
-import { placeholderCanvas } from './wall.js?v=20261102f';
-import { letters, writeLetter, addLetter, ensureEmptySlot, refreshLetters, onLettersChange, LETTER_MAX, LETTER_SLOTS } from './letters.js?v=20261102f';
+import { placeholderCanvas } from './wall.js?v=20261102g';
+import { letters, writeLetter, addLetter, ensureEmptySlot, refreshLetters, onLettersChange, LETTER_MAX, LETTER_SLOTS } from './letters.js?v=20261102g';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -185,7 +185,9 @@ export function createUI({ site, photos, music, hooks }) {
       closeEditor();
       cur = saved;
       renderLetter(saved, true);
-      toast(result === 'created' ? '편지가 꽃에 담겼어요 💌' : '편지를 고쳤어요 ✏️');
+      toast(saved !== slot
+        ? `다른 친구가 먼저 써서 ${saved + 1}번 칸에 담았어요 💌`
+        : result === 'created' ? '편지가 꽃에 담겼어요 💌' : '편지를 고쳤어요 ✏️', saved !== slot ? 3400 : 2600);
       const r = paper.getBoundingClientRect();
       confetti(r.left + r.width / 2, r.top + 10, { count: 70 });
       hooks.onWritten?.(slot);
@@ -205,7 +207,16 @@ export function createUI({ site, photos, music, hooks }) {
     const full = letters.filter((l) => !l.empty).length >= LETTER_SLOTS;
     cta.textContent = full ? '📖 편지 읽기' : '✍️ 편지 남기기';
     cta.classList.toggle('read', full);
+    ctaWrite.hidden = !full || (firstEmpty() < 0 && letters.length >= LETTER_MAX);
   }
+  const ctaWrite = $('cta-write');
+  // 편지 읽기 옆 ✍️ : 다음 빈 칸(없으면 새 칸)에 바로 쓰기
+  ctaWrite.onclick = () => {
+    const i = ensureEmptySlot();
+    if (i < 0) { toast(`편지함이 가득 찼어요 (최대 ${LETTER_MAX}통).`); return; }
+    openLetter(i);
+    openEditor();
+  };
   cta.onclick = () => {
     if (cta.classList.contains('read')) { openLetter(0); return; }
     const i = ensureEmptySlot();
