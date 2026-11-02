@@ -5,22 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#e4dfd6">
   <title>Memory of Bouquet</title>
-  <meta name="description" content="친구들의 마음이 담긴 디지털 부케 편지함">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://uivory.github.io/wedding-bouquet_for-minjoo&amp;yoonho/">
   <meta property="og:title" content="Memory of Bouquet">
-  <meta property="og:description" content="꽃을 눌러 친구들의 편지를 열어보세요 💐">
+  <meta property="og:description" content="꽃을 눌러 친구들의 편지를 읽고, 마음을 남겨주세요 💐">
+  <meta property="og:image" content="https://uivory.github.io/og.jpg?v=1">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="부케와 결혼 사진이 붙은 벽, 강아지 두 마리가 있는 방">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Memory of Bouquet">
+  <meta name="twitter:description" content="꽃을 눌러 친구들의 편지를 읽고, 마음을 남겨주세요 💐">
+  <meta name="twitter:image" content="https://uivory.github.io/og.jpg?v=1">
+  <meta name="description" content="친구들의 마음이 담긴 디지털 부케 편지함">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Ctext y=%27.9em%27 font-size=%2790%27%3E%F0%9F%92%90%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "./vendor/three/three.module.min.js",
-      "three/addons/": "./vendor/three/addons/"
-    }
-  }
-  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Gowun+Dodum&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <link rel="modulepreload" href="vendor/three/three.module.min.js?v=r170">
+  <link rel="stylesheet" href="css/style.css?v=20261102c">
 </head>
 <body>
   <canvas id="stage" aria-label="3D 부케 편지함"></canvas>
@@ -135,12 +139,43 @@
 
   <div id="loader">
     <div class="petals"><i></i><i></i><i></i><i></i><i></i></div>
-    <p>부케를 다듬는 중이에요…</p>
+    <p id="loader-msg">부케를 다듬는 중이에요…</p>
+    <button id="loader-retry" type="button" hidden>다시 불러오기</button>
   </div>
+  <script>
+    /* 무한 로딩 방지: 오류가 나거나 너무 오래 걸리면 "다시 불러오기" 버튼을 보여줌 */
+    (function () {
+      var loader = document.getElementById('loader');
+      function fail(msg) {
+        if (loader.classList.contains('done')) return;
+        document.getElementById('loader-msg').textContent = msg;
+        document.getElementById('loader-retry').hidden = false;
+      }
+      window.__bootFail = fail;
+      document.getElementById('loader-retry').onclick = function () {
+        // 주소를 살짝 바꿔서 휴대폰에 남아 있는 예전 파일 대신 새 파일을 받게 함
+        var u = new URL(location.href);
+        u.searchParams.set('r', Date.now().toString(36));
+        location.replace(u.toString());
+      };
+      window.addEventListener('error', function (e) {
+        if (e.target && e.target.tagName === 'SCRIPT') fail('파일을 불러오지 못했어요. 다시 불러와 주세요.');
+        else if (e.message) fail('화면을 준비하다 문제가 생겼어요. 다시 불러와 주세요.');
+      }, true);
+      window.addEventListener('unhandledrejection', function () { fail('화면을 준비하다 문제가 생겼어요. 다시 불러와 주세요.'); });
+      setTimeout(function () { fail('조금 오래 걸리고 있어요. 안 열리면 다시 불러와 주세요.'); }, 25000);
+      // WebGL 이 꺼져 있는 기기
+      try {
+        var c = document.createElement('canvas');
+        if (!(c.getContext('webgl2') || c.getContext('webgl'))) fail('이 브라우저에서는 3D 화면을 열 수 없어요. Safari 나 Chrome 으로 열어주세요.');
+      } catch (_) {}
+    })();
+  </script>
+  <script nomodule>document.getElementById('loader-msg').textContent = '브라우저가 너무 오래됐어요. Safari 나 Chrome 최신 버전으로 열어주세요.';</script>
 
   <audio id="bgm" loop preload="metadata" playsinline></audio>
 
   <noscript><p style="position:fixed;inset:0;display:grid;place-items:center">이 페이지는 JavaScript가 필요해요.</p></noscript>
-  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/main.js?v=20261102c"></script>
 </body>
 </html>

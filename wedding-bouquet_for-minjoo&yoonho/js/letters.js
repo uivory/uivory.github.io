@@ -1,4 +1,4 @@
-import { letters as presetLetters, letterApi, LETTER_SLOTS } from '../data/content.js';
+import { letters as presetLetters, letterApi, LETTER_SLOTS } from '../data/content.js?v=20261102c';
 
 /* ────────────────────────────────────────────────────────────
    편지 저장소 (Supabase)

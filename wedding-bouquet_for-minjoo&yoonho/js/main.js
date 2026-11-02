@@ -1,12 +1,12 @@
-import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { site, photos, poster, music } from '../data/content.js';
-import { letters, refreshLetters } from './letters.js';
-import { buildRoom, TABLE_TOP_Y, WALL_Z, blobShadow, canvasTexture } from './room.js';
-import { loadBouquet } from './bouquet.js';
-import { createDogs } from './dogs.js';
-import { buildWall } from './wall.js';
-import { createUI } from './ui.js';
+import * as THREE from '../vendor/three/three.module.min.js?v=r170';
+import { RoomEnvironment } from '../vendor/three/addons/environments/RoomEnvironment.js?v=r170';
+import { site, photos, poster, music } from '../data/content.js?v=20261102c';
+import { letters, refreshLetters } from './letters.js?v=20261102c';
+import { buildRoom, TABLE_TOP_Y, WALL_Z, blobShadow, canvasTexture } from './room.js?v=20261102c';
+import { loadBouquet } from './bouquet.js?v=20261102c';
+import { createDogs } from './dogs.js?v=20261102c';
+import { buildWall } from './wall.js?v=20261102c';
+import { createUI } from './ui.js?v=20261102c';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('stage');
@@ -557,7 +557,7 @@ function frame() {
     wall.group.visible = true;
   } catch (err) {
     console.error(err);
-    $('loader').querySelector('p').textContent = '부케를 불러오지 못했어요. 새로고침 해주세요.';
+    window.__bootFail?.('부케를 불러오지 못했어요. 다시 불러와 주세요.');
     return;
   }
   {
@@ -568,6 +568,9 @@ function frame() {
     spin.add(bqHit);
   }
   refreshLetters(true);
+  // 셰이더를 미리(가능하면 병렬로) 준비해서 첫 화면 멈춤을 줄임
+  updateCamera(0);
+  try { await renderer.compileAsync(scene, camera); } catch { /* 지원 안 하면 첫 프레임에서 준비 */ }
   renderer.setAnimationLoop(frame);
   requestAnimationFrame(() => requestAnimationFrame(() => $('loader').classList.add('done')));
 

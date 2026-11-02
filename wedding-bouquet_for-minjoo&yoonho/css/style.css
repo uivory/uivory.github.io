@@ -271,3 +271,6 @@ body.reading .cta, body.viewing .cta { pointer-events: none; }
 .compose .pin input:placeholder-shown { letter-spacing: 0; font-size: 13px; }
 .sheet .paper.editing { max-height: 84vh; max-height: 84dvh; }
 .pk-frame { background: radial-gradient(circle at 50% 42%, #f6f3ea, #e6e0d2); }
+#loader-retry { margin-top: 4px; min-height: 44px; padding: 10px 22px; border-radius: 999px; background: #6f8a4e; color: #fff; font-size: 14px; }
+#loader-retry[hidden] { display: none; }
+#loader p { text-align: center; max-width: 80vw; line-height: 1.5; }

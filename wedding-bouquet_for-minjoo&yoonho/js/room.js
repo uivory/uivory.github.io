@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from '../vendor/three/three.module.min.js?v=r170';
 
 export const WALL_Z = -0.95;
 export const TABLE_TOP_Y = 0.66;
@@ -15,14 +15,30 @@ export function canvasTexture(w, h, draw, { srgb = true, repeat } = {}) {
   return t;
 }
 
-function grain(ctx, w, h, amount = 10, alpha = 1) {
-  const img = ctx.getImageData(0, 0, w, h);
-  const d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const n = (Math.random() - 0.5) * amount * alpha;
-    d[i] += n; d[i + 1] += n; d[i + 2] += n;
+/* 종이/벽 질감 노이즈: 작은 노이즈 타일을 한 번만 만들고 패턴으로 덮어 씀
+   (큰 캔버스 전체를 픽셀 단위로 계산하면 휴대폰에서 몇 초씩 걸려서) */
+let _noise;
+function noiseTile() {
+  if (_noise) return _noise;
+  const n = 128;
+  _noise = document.createElement('canvas');
+  _noise.width = _noise.height = n;
+  const g = _noise.getContext('2d');
+  const img = g.createImageData(n, n);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() < 0.5 ? 0 : 255;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = Math.random() * 255;
   }
-  ctx.putImageData(img, 0, 0);
+  g.putImageData(img, 0, 0);
+  return _noise;
+}
+function grain(ctx, w, h, amount = 10) {
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, amount / 260); // 원래 픽셀 노이즈(±amount/2)와 비슷한 세기
+  ctx.fillStyle = ctx.createPattern(noiseTile(), 'repeat');
+  ctx.fillRect(0, 0, w, h);
+  ctx.restore();
 }
 
 let _blobTex;
@@ -100,7 +116,7 @@ export function buildRoom() {
   room.add(base);
 
   // floor ---------------------------------------------------
-  const floorTex = canvasTexture(1024, 1024, (g, w, h) => {
+  const floorTex = canvasTexture(512, 512, (g, w, h) => {
     g.fillStyle = '#c2b8a6'; g.fillRect(0, 0, w, h);
     const planks = 8;
     for (let i = 0; i < planks; i++) {
@@ -114,7 +130,7 @@ export function buildRoom() {
       for (let y = Math.random() * 300; y < h; y += 260 + Math.random() * 260) g.fillRect(x, y, w / planks, 2);
     }
     // 나뭇결
-    for (let i = 0; i < 260; i++) {
+    for (let i = 0; i < 140; i++) {
       g.strokeStyle = `rgba(140,115,80,${Math.random() * 0.08})`;
       g.lineWidth = 1 + Math.random() * 2;
       const x = Math.random() * w;
@@ -140,7 +156,7 @@ export function buildRoom() {
     g.strokeStyle = 'rgba(190,175,150,.55)'; g.lineWidth = 6;
     g.beginPath(); g.arc(w / 2, h / 2, w / 2 - 22, 0, Math.PI * 2); g.stroke();
     // 보송한 질감
-    for (let i = 0; i < 5000; i++) {
+    for (let i = 0; i < 2200; i++) {
       const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * (w / 2 - 4);
       g.fillStyle = `rgba(${Math.random() > 0.5 ? '255,255,252' : '200,185,160'},${Math.random() * 0.35})`;
       g.fillRect(w / 2 + Math.cos(a) * r, h / 2 + Math.sin(a) * r, 2, 2);

@@ -1,5 +1,5 @@
-import * as THREE from 'three';
-import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import * as THREE from '../vendor/three/three.module.min.js?v=r170';
+import { mergeGeometries, mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=r170';
 
 /* ────────────────────────────────────────────────────────────
    화이트 웨딩 부케 — 꽃잎 한 장 한 장을 절차적으로 생성합니다.

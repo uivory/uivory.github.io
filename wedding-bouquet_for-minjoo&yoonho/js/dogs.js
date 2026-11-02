@@ -1,6 +1,6 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { blobShadow } from './room.js';
+import * as THREE from '../vendor/three/three.module.min.js?v=r170';
+import { mergeGeometries } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=r170';
+import { blobShadow } from './room.js?v=20261102c';
 
 /* ────────────────────────────────────────────────────────────
    앉아 있는 강아지 (폼피츠 / 비숑)
